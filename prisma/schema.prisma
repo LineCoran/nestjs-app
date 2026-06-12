@@ -1,3 +1,8 @@
+// Схема БД проекта «Горы по колено».
+// Спроектирована по ТЗ (feature.md) с учётом доработок:
+// included/excluded/whatToTake/tags — переиспользуемые справочники,
+// привязываемые к турам; даты заездов вынесены в отдельные сессии (TourSession).
+
 generator client {
   provider     = "prisma-client"
   output       = "../src/generated/prisma"
@@ -8,34 +13,389 @@ datasource db {
   provider = "postgresql"
 }
 
-model User {
-  id String @id @default(uuid())
+// ───────────────────────────── Enums ─────────────────────────────
 
-  login       String
-  first_name  String?
-  second_name String?
-  age         Int?
-
-  created_at DateTime @default(now()) @map("created_at")
-  updated_at DateTime @updatedAt
-
-  tasks Task[]
-
-  @@map("users")
+enum Difficulty {
+  EASY // лёгкая
+  MEDIUM // средняя
+  HARD // сложная
 }
 
-model Task {
+enum DateAvailability {
+  AVAILABLE // 3+ места
+  LIMITED // 1-2 места
+  FULL // мест нет
+}
+
+enum InclusionType {
+  INCLUDED // входит в стоимость
+  EXCLUDED // не входит в стоимость
+}
+
+enum BookingSource {
+  TOUR_PAGE // со страницы тура
+  HOMEPAGE // с главной страницы
+  CUSTOM // индивидуальный подбор
+}
+
+enum BookingStatus {
+  NEW
+  IN_PROGRESS
+  DONE
+  REJECTED
+}
+
+enum ImportantInfoType {
+  INFO
+  WARNING
+  SUCCESS
+}
+
+// ───────────────────────────── Туры ──────────────────────────────
+
+model Tour {
   id String @id @default(uuid())
 
+  slug        String   @unique
+  title       String
+  subtitle    String? // краткое описание (вступительный абзац)
+  description String? // ещё более короткий анонс для карточек
+  coverImage  String? // обложка
+  gallery     String[] @default([]) // массив URL изображений галереи
+
+  durationDays Int // продолжительность в днях
+  groupSize    String? // размер группы текстом, например «8-12 чел.»
+  difficulty   Difficulty @default(MEDIUM)
+  season       String? // сезон проведения, например «июн-сен»
+  nearestDate  DateTime? // дата ближайшего тура
+
+  badges    String[] @default([]) // метки-бейджи: «новинка», «хит» и т.д.
+  aboutText String? // расширенное описание «О туре» (rich text / HTML)
+
+  category   TourCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categoryId String?
+
+  // Вложенные/связанные данные тура
+  program       TourProgramItem[]
+  priceOptions  TourPriceOption[]
+  sessions      TourSession[]
+  importantInfo ImportantInfoItem[]
+
+  // Привязки к переиспользуемым справочникам
+  features   TourFeatureLink[] // «что входит / не входит»
+  whatToTake TourWhatToTakeLink[] // «что взять с собой»
+
+  // «С туром чаще выбирают» — связь many-to-many сам на себя
+  relatedTours   Tour[] @relation("RelatedTours")
+  relatedToTours Tour[] @relation("RelatedTours")
+
+  bookings Booking[]
+
+  isPublished Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([categoryId])
+  @@index([isPublished])
+  @@map("tours")
+}
+
+model TourCategory {
+  id   String @id @default(uuid())
+  name String
+  slug String @unique
+
+  tours Tour[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("tour_categories")
+}
+
+// ─────────────────────── Программа тура ───────────────────────────
+
+model TourProgramItem {
+  id String @id @default(uuid())
+
+  order       Int // порядковый номер дня/этапа
   title       String
   description String?
-  rating      Float   @default(0.0)
-  is_done     Boolean @default(false) @map("is_done")
 
-  users User[]
+  tour   Tour   @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  tourId String
 
-  created_at DateTime @default(now()) @map("created_at")
-  updated_at DateTime @updatedAt
+  // Теги-плашки из справочника (m2m): «Акклиматизация», «Завтрак»
+  tags ProgramTag[] @relation("ProgramItemTags")
 
-  @@map("tasks")
+  @@unique([tourId, order])
+  @@index([tourId])
+  @@map("tour_program_items")
+}
+
+// Справочник тегов программы (создаётся в админке, переиспользуется)
+model ProgramTag {
+  id   String @id @default(uuid())
+  name String @unique
+
+  programItems TourProgramItem[] @relation("ProgramItemTags")
+
+  createdAt DateTime @default(now())
+
+  @@map("program_tags")
+}
+
+// ─────────────────────── Цены и сессии ────────────────────────────
+
+model TourPriceOption {
+  id String @id @default(uuid())
+
+  formatName   String // «Вахтовый автобус», «Джипы», «Вертолёт»
+  priceFrom    Int // цена «от» за человека
+  maxGroupSize Int?
+
+  tour   Tour   @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  tourId String
+
+  bookings Booking[]
+
+  @@index([tourId])
+  @@map("tour_price_options")
+}
+
+// Сессия/заезд тура с конкретными датами (Tour 1—N TourSession)
+model TourSession {
+  id String @id @default(uuid())
+
+  dateFrom     DateTime
+  dateTo       DateTime
+  availability DateAvailability @default(AVAILABLE)
+
+  tour   Tour   @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  tourId String
+
+  bookings Booking[]
+
+  @@index([tourId])
+  @@index([dateFrom])
+  @@map("tour_sessions")
+}
+
+model ImportantInfoItem {
+  id String @id @default(uuid())
+
+  icon        String?
+  title       String
+  description String?
+  type        ImportantInfoType @default(INFO)
+  order       Int               @default(0)
+
+  tour   Tour   @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  tourId String
+
+  @@index([tourId])
+  @@map("tour_important_info")
+}
+
+// ──────────── Справочник «что входит / не входит» ─────────────────
+
+model TourFeature {
+  id          String  @id @default(uuid())
+  name        String  @unique // «Трансфер», «Питание», «Wi-Fi»
+  description String?
+  icon        String?
+  category    String? // «Питание», «Услуги», «Транспорт»
+
+  links TourFeatureLink[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@map("tour_features")
+}
+
+// Привязка фичи к туру с типом (входит/не входит)
+model TourFeatureLink {
+  id String @id @default(uuid())
+
+  tour   Tour   @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  tourId String
+
+  feature   TourFeature @relation(fields: [featureId], references: [id], onDelete: Cascade)
+  featureId String
+
+  inclusion InclusionType
+  note      String? // уточнение для конкретного тура
+  order     Int     @default(0)
+
+  @@unique([tourId, featureId, inclusion])
+  @@index([tourId])
+  @@index([featureId])
+  @@map("tour_feature_links")
+}
+
+// ──────────────── Справочник «что взять с собой» ──────────────────
+
+model WhatToTakeCategory {
+  id   String @id @default(uuid())
+  name String @unique // «Личные вещи», «Снаряжение»
+
+  items WhatToTakeItem[]
+
+  createdAt DateTime @default(now())
+
+  @@map("what_to_take_categories")
+}
+
+model WhatToTakeItem {
+  id   String @id @default(uuid())
+  name String
+
+  category   WhatToTakeCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId String
+
+  links TourWhatToTakeLink[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([categoryId, name])
+  @@index([categoryId])
+  @@map("what_to_take_items")
+}
+
+// Привязка пункта «что взять» к туру
+model TourWhatToTakeLink {
+  id String @id @default(uuid())
+
+  tour   Tour   @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  tourId String
+
+  item   WhatToTakeItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId String
+
+  order Int @default(0)
+
+  @@unique([tourId, itemId])
+  @@index([tourId])
+  @@map("tour_what_to_take_links")
+}
+
+// ─────────────────────────── Заявки ──────────────────────────────
+
+model Booking {
+  id String @id @default(uuid())
+
+  name          String
+  phone         String
+  contactMethod String? // телефон / телеграм / whatsapp
+
+  source BookingSource
+
+  tour   Tour?   @relation(fields: [tourId], references: [id], onDelete: SetNull)
+  tourId String?
+
+  priceOption   TourPriceOption? @relation(fields: [priceOptionId], references: [id], onDelete: SetNull)
+  priceOptionId String?
+
+  session   TourSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  sessionId String?
+
+  desiredDates String? // желаемые даты текстом
+  peopleCount  Int?
+  tourFormat   String? // формат тура текстом
+  comment      String?
+
+  preferences     String[] @default([]) // теги предпочтений для «индивидуально»
+  isCustomRequest Boolean  @default(false)
+
+  totalPrice Int?
+
+  status BookingStatus @default(NEW)
+
+  createdAt DateTime @default(now())
+
+  @@index([status])
+  @@index([source])
+  @@index([createdAt])
+  @@map("bookings")
+}
+
+// ──────────────────────────── Блог ───────────────────────────────
+
+model BlogPost {
+  id String @id @default(uuid())
+
+  slug       String  @unique
+  title      String
+  excerpt    String?
+  coverImage String?
+  content    String? // rich text / markdown
+
+  isPublished Boolean   @default(false)
+  publishedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isPublished])
+  @@map("blog_posts")
+}
+
+// ──────────────────────── Команда гидов ──────────────────────────
+
+model Guide {
+  id String @id @default(uuid())
+
+  name        String
+  role        String? // должность
+  photo       String?
+  description String?
+  order       Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("guides")
+}
+
+// ─────────────────── Контент «О нас» / главной ────────────────────
+// Singleton: в таблице всегда одна запись.
+
+model CompanyInfo {
+  id String @id @default(uuid())
+
+  aboutText  String?
+  aboutImage String?
+
+  // Статистика-бейджи: [{ value, label }]
+  stats Json @default("[]")
+
+  // Hero-блок главной
+  heroTitle    String?
+  heroSubtitle String?
+  heroImage    String?
+
+  // Контакты
+  contactPhone String?
+  telegramLink String?
+  vkLink       String?
+
+  updatedAt DateTime @updatedAt
+
+  @@map("company_info")
+}
+
+// ───────────────────────── Администратор ─────────────────────────
+
+model AdminUser {
+  id String @id @default(uuid())
+
+  email        String @unique
+  passwordHash String
+
+  createdAt DateTime @default(now())
+
+  @@map("admin_users")
 }
