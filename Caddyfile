@@ -1,0 +1,9 @@
+# Caddy для бэкенд-сервера: весь домен → API (REST /api, файлы /uploads, WebSocket /socket.io).
+# DOMAIN в .env:
+#   - api.example.com → авто-HTTPS (Let's Encrypt). Нужна A-запись на IP сервера.
+#   - :80             → только HTTP (тест по IP, без домена)
+
+{$DOMAIN} {
+	encode gzip zstd
+	reverse_proxy api:3000
+}
