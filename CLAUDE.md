@@ -20,7 +20,7 @@ npm run start:dev                   # API на :3000, префикс /api
 npm run build                       # nest build → dist/main.js
 npm run lint
 ```
-Сиды (`prisma/seed.ts`, `seed-demo.ts`) запускаются через **tsx** (не ts-node — генерированный клиент использует `.js`-require). `npm run start:prod` = `node dist/main`.
+Сиды (`prisma/seed.ts`) запускаются через **tsx** (не ts-node — генерированный клиент использует `.js`-require). `npm run start:prod` = `node dist/main`.
 
 ## Архитектура
 
