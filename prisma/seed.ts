@@ -62,6 +62,20 @@ function makeSessions(startMonth: number, durationDays: number, count: number) {
 }
 
 async function main() {
+  // ⚠️ ЗАЩИТА: этот сид УДАЛЯЕТ туры/заявки/гидов/блог (deleteMany ниже).
+  // Не даём запустить его на проде случайно. Чтобы всё же выполнить —
+  // явно: ALLOW_DESTRUCTIVE_SEED=true npm run seed:demo
+  if (
+    process.env.NODE_ENV === 'production' &&
+    process.env.ALLOW_DESTRUCTIVE_SEED !== 'true'
+  ) {
+    console.error(
+      '⛔ Демо-сид удаляет данные и заблокирован на проде. ' +
+        'Если уверены — задайте ALLOW_DESTRUCTIVE_SEED=true.',
+    );
+    process.exit(1);
+  }
+
   console.log('🌱 Демо-сид: старт');
 
   // ── Администратор ──
