@@ -168,11 +168,14 @@ export class ToursService {
     where: Prisma.TourWhereInput,
     query: QueryToursDto,
   ): Promise<PaginatedResult<unknown>> {
+    const orderBy: Prisma.TourOrderByWithRelationInput =
+      query.sort === 'old' ? { createdAt: 'asc' } : { createdAt: 'desc' };
+
     const [items, total] = await this.prisma.$transaction([
       this.prisma.tour.findMany({
         where,
         select: TOUR_CARD_SELECT,
-        orderBy: { createdAt: 'desc' },
+        orderBy,
         skip: query.skip,
         take: query.limit,
       }),
@@ -181,21 +184,88 @@ export class ToursService {
     return buildPaginatedResult(items, total, query.page, query.limit);
   }
 
-  /** Общие фильтры каталога (категория, поиск, сложность, цена). */
+  /** Общие фильтры каталога (категория, поиск, сложность, сезон, формат, особенности, длительность, цена). */
   private buildFilters(query: QueryToursDto): Prisma.TourWhereInput {
     const priceFilter: Prisma.IntFilter = {};
     if (query.priceMin !== undefined) priceFilter.gte = query.priceMin;
     if (query.priceMax !== undefined) priceFilter.lte = query.priceMax;
+
+    const durationFilter: Prisma.IntFilter = {};
+    if (query.durationMin !== undefined) durationFilter.gte = query.durationMin;
+    if (query.durationMax !== undefined) durationFilter.lte = query.durationMax;
 
     return {
       ...(query.category ? { category: { slug: query.category } } : {}),
       ...(query.search
         ? { title: { contains: query.search, mode: 'insensitive' } }
         : {}),
-      ...(query.difficulty ? { difficulty: query.difficulty } : {}),
+      ...(query.difficulty?.length
+        ? { difficulty: { in: query.difficulty } }
+        : {}),
+      ...(query.seasons?.length ? { season: { in: query.seasons } } : {}),
+      ...(query.formats?.length
+        ? { priceOptions: { some: { formatName: { in: query.formats } } } }
+        : {}),
+      ...(query.features?.length
+        ? { features: { some: { featureId: { in: query.features } } } }
+        : {}),
+      ...(Object.keys(durationFilter).length
+        ? { durationDays: durationFilter }
+        : {}),
       ...(Object.keys(priceFilter).length
         ? { priceOptions: { some: { priceFrom: priceFilter } } }
         : {}),
+    };
+  }
+
+  /** Доступные значения фильтров каталога (фасеты) по опубликованным турам. */
+  async getFilterFacets() {
+    const where: Prisma.TourWhereInput = { isPublished: true };
+
+    const [tours, features, priceAgg, durationAgg] = await Promise.all([
+      this.prisma.tour.findMany({
+        where,
+        select: {
+          season: true,
+          priceOptions: { select: { formatName: true } },
+        },
+      }),
+      this.prisma.tourFeature.findMany({
+        where: { links: { some: { tour: where } } },
+        select: { id: true, name: true, category: true },
+        orderBy: { name: 'asc' },
+      }),
+      this.prisma.tourPriceOption.aggregate({
+        where: { tour: where },
+        _min: { priceFrom: true },
+        _max: { priceFrom: true },
+      }),
+      this.prisma.tour.aggregate({
+        where,
+        _min: { durationDays: true },
+        _max: { durationDays: true },
+      }),
+    ]);
+
+    const seasons = [
+      ...new Set(tours.map((t) => t.season).filter((s): s is string => !!s)),
+    ].sort();
+    const formats = [
+      ...new Set(tours.flatMap((t) => t.priceOptions.map((p) => p.formatName))),
+    ].sort();
+
+    return {
+      seasons,
+      formats,
+      features,
+      price: {
+        min: priceAgg._min.priceFrom ?? 0,
+        max: priceAgg._max.priceFrom ?? 0,
+      },
+      duration: {
+        min: durationAgg._min.durationDays ?? 1,
+        max: durationAgg._max.durationDays ?? 1,
+      },
     };
   }
 

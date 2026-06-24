@@ -11,6 +11,12 @@ export class ToursPublicController {
     return this.toursService.findPublished(query);
   }
 
+  /** Доступные значения фильтров каталога. Объявлен до `:slug`, иначе перехватится им. */
+  @Get('filters')
+  filters() {
+    return this.toursService.getFilterFacets();
+  }
+
   @Get(':slug')
   getBySlug(@Param('slug') slug: string) {
     return this.toursService.findBySlug(slug);

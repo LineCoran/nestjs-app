@@ -9,6 +9,10 @@ export class CreateCategoryDto {
   @IsOptional()
   @IsString()
   slug?: string; // если пусто — сгенерируется из name
+
+  @IsOptional()
+  @IsString()
+  image?: string; // URL обложки категории
 }
 
 export class UpdateCategoryDto extends PartialType(CreateCategoryDto) {}

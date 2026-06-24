@@ -98,12 +98,12 @@ async function main() {
     { name: 'Зимние туры', slug: 'zimnie' },
     { name: 'Морские прогулки', slug: 'morskie' },
     { name: 'Фрирайд', slug: 'frirayd' },
-  ];
+  ].map((c) => ({ ...c, image: img(`category-${c.slug}`, 320, 200) }));
   const categories: Record<string, string> = {};
   for (const c of categoryData) {
     const cat = await prisma.tourCategory.upsert({
       where: { slug: c.slug },
-      update: { name: c.name },
+      update: { name: c.name, image: c.image },
       create: c,
     });
     categories[c.slug] = cat.id;

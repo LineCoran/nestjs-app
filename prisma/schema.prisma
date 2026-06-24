@@ -102,9 +102,10 @@ model Tour {
 }
 
 model TourCategory {
-  id   String @id @default(uuid())
-  name String
-  slug String @unique
+  id    String  @id @default(uuid())
+  name  String
+  slug  String  @unique
+  image String? // обложка категории (для плашек-фильтров в каталоге)
 
   tours Tour[]
 

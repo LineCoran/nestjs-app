@@ -26,7 +26,9 @@ export class TourCategoriesService {
     const slug = await ensureUniqueSlug(dto.slug || dto.name, (s) =>
       this.slugExists(s),
     );
-    return this.prisma.tourCategory.create({ data: { name: dto.name, slug } });
+    return this.prisma.tourCategory.create({
+      data: { name: dto.name, slug, image: dto.image },
+    });
   }
 
   async update(id: string, dto: UpdateCategoryDto) {
@@ -41,7 +43,11 @@ export class TourCategoriesService {
 
     return this.prisma.tourCategory.update({
       where: { id },
-      data: { name: dto.name, ...(slug ? { slug } : {}) },
+      data: {
+        name: dto.name,
+        ...(slug ? { slug } : {}),
+        ...(dto.image !== undefined ? { image: dto.image } : {}),
+      },
     });
   }
 
