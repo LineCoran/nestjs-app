@@ -11,7 +11,11 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { BlogService } from './blog.service';
-import { CreateBlogPostDto, UpdateBlogPostDto } from './dto/blog.dto';
+import {
+  BlogListQueryDto,
+  CreateBlogPostDto,
+  UpdateBlogPostDto,
+} from './dto/blog.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 
 @Controller('blog')
@@ -19,8 +23,13 @@ export class BlogPublicController {
   constructor(private readonly service: BlogService) {}
 
   @Get()
-  list(@Query() query: PaginationDto) {
+  list(@Query() query: BlogListQueryDto) {
     return this.service.findPublished(query);
+  }
+
+  @Get('categories')
+  categories() {
+    return this.service.findCategories();
   }
 
   @Get(':slug')
