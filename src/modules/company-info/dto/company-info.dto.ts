@@ -55,4 +55,52 @@ export class UpdateCompanyInfoDto {
   @IsOptional()
   @IsString()
   vkLink?: string;
+
+  @IsOptional()
+  @IsString()
+  legalName?: string;
+
+  @IsOptional()
+  @IsString()
+  directorName?: string;
+
+  @IsOptional()
+  @IsString()
+  email?: string;
+
+  @IsOptional()
+  @IsString()
+  address?: string;
+
+  @IsOptional()
+  @IsString()
+  website?: string;
+
+  @IsOptional()
+  @IsString()
+  inn?: string;
+
+  @IsOptional()
+  @IsString()
+  kpp?: string;
+
+  @IsOptional()
+  @IsString()
+  ogrn?: string;
+
+  @IsOptional()
+  @IsString()
+  bankName?: string;
+
+  @IsOptional()
+  @IsString()
+  settlementAccount?: string;
+
+  @IsOptional()
+  @IsString()
+  correspondentAccount?: string;
+
+  @IsOptional()
+  @IsString()
+  bic?: string;
 }

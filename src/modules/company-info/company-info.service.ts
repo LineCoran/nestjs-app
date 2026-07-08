@@ -31,6 +31,18 @@ export class CompanyInfoService {
         contactPhone: dto.contactPhone,
         telegramLink: dto.telegramLink,
         vkLink: dto.vkLink,
+        legalName: dto.legalName,
+        directorName: dto.directorName,
+        email: dto.email,
+        address: dto.address,
+        website: dto.website,
+        inn: dto.inn,
+        kpp: dto.kpp,
+        ogrn: dto.ogrn,
+        bankName: dto.bankName,
+        settlementAccount: dto.settlementAccount,
+        correspondentAccount: dto.correspondentAccount,
+        bic: dto.bic,
       },
     });
   }

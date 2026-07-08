@@ -11,6 +11,7 @@ import {
 import {
   BookingSource,
   BookingStatus,
+  BookingType,
 } from '../../../generated/prisma/enums';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 
@@ -29,6 +30,10 @@ export class CreateBookingDto {
 
   @IsEnum(BookingSource)
   source: BookingSource;
+
+  @IsOptional()
+  @IsEnum(BookingType)
+  type?: BookingType;
 
   @IsOptional()
   @IsString()
@@ -82,4 +87,8 @@ export class QueryBookingsDto extends PaginationDto {
   @IsOptional()
   @IsEnum(BookingSource)
   source?: BookingSource;
+
+  @IsOptional()
+  @IsEnum(BookingType)
+  type?: BookingType;
 }

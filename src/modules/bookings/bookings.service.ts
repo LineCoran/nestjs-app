@@ -38,6 +38,7 @@ export class BookingsService {
         phone: dto.phone,
         contactMethod: dto.contactMethod,
         source: dto.source,
+        type: dto.type,
         tourId: dto.tourId,
         priceOptionId: dto.priceOptionId,
         sessionId: dto.sessionId,
@@ -62,6 +63,7 @@ export class BookingsService {
     const where: Prisma.BookingWhereInput = {
       ...(query.status ? { status: query.status } : {}),
       ...(query.source ? { source: query.source } : {}),
+      ...(query.type ? { type: query.type } : {}),
     };
 
     const [items, total] = await this.prisma.$transaction([

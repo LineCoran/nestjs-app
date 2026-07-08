@@ -45,6 +45,11 @@ enum BookingStatus {
   REJECTED
 }
 
+enum BookingType {
+  BOOKING // заявка на бронирование / подбор тура
+  QUESTION // вопрос со страницы информации
+}
+
 enum ImportantInfoType {
   INFO
   WARNING
@@ -293,6 +298,7 @@ model Booking {
   contactMethod String? // телефон / телеграм / whatsapp
 
   source BookingSource
+  type   BookingType @default(BOOKING)
 
   tour   Tour?   @relation(fields: [tourId], references: [id], onDelete: SetNull)
   tourId String?
@@ -319,6 +325,7 @@ model Booking {
 
   @@index([status])
   @@index([source])
+  @@index([type])
   @@index([createdAt])
   @@map("bookings")
 }
@@ -400,6 +407,20 @@ model CompanyInfo {
   contactPhone String?
   telegramLink String?
   vkLink       String?
+
+  // Контакты и реквизиты компании (юр. данные)
+  legalName            String? // полное наименование ООО
+  directorName         String? // ФИО генерального директора
+  email                String?
+  address              String?
+  website              String?
+  inn                  String?
+  kpp                  String?
+  ogrn                 String?
+  bankName             String?
+  settlementAccount    String? // расчётный счёт
+  correspondentAccount String? // корреспондентский счёт
+  bic                  String?
 
   updatedAt DateTime @updatedAt
 
