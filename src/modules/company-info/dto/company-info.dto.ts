@@ -17,6 +17,24 @@ export class CompanyStatDto {
   label: string; // например «лет опыта»
 }
 
+export class SocialLinkDto {
+  @IsString()
+  @IsNotEmpty()
+  platform: string; // telegram | vk | instagram | whatsapp | wechat | …
+
+  @IsOptional()
+  @IsString()
+  label?: string; // «Канал» / «Группа» / «Аккаунт»
+
+  @IsOptional()
+  @IsString()
+  value?: string; // отображаемый ник/название
+
+  @IsOptional()
+  @IsString()
+  url?: string; // ссылка
+}
+
 export class UpdateCompanyInfoDto {
   @IsOptional()
   @IsString()
@@ -55,6 +73,33 @@ export class UpdateCompanyInfoDto {
   @IsOptional()
   @IsString()
   vkLink?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  phones?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SocialLinkDto)
+  socialLinks?: SocialLinkDto[];
+
+  @IsOptional()
+  @IsString()
+  region?: string;
+
+  @IsOptional()
+  @IsString()
+  workingDays?: string;
+
+  @IsOptional()
+  @IsString()
+  workingHours?: string;
+
+  @IsOptional()
+  @IsString()
+  registryNumber?: string;
 
   @IsOptional()
   @IsString()

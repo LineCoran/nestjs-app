@@ -408,6 +408,20 @@ model CompanyInfo {
   telegramLink String?
   vkLink       String?
 
+  // Телефоны (список, для блока «Связаться с нами»)
+  phones String[] @default([])
+
+  // Соцсети (блок «Мы в соцсетях»): [{ platform, label, value, url }]
+  socialLinks Json @default("[]")
+
+  // Блок «Как найти нас»
+  region       String? // «Камчатский край, Россия»
+  workingDays  String? // «Ежедневно»
+  workingHours String? // «09:00 - 22:00 (GMT +12)»
+
+  // Реестровый номер туроператора
+  registryNumber String?
+
   // Контакты и реквизиты компании (юр. данные)
   legalName            String? // полное наименование ООО
   directorName         String? // ФИО генерального директора

@@ -31,6 +31,15 @@ export class CompanyInfoService {
         contactPhone: dto.contactPhone,
         telegramLink: dto.telegramLink,
         vkLink: dto.vkLink,
+        phones: dto.phones,
+        socialLinks:
+          dto.socialLinks !== undefined
+            ? (dto.socialLinks as unknown as Prisma.InputJsonValue)
+            : undefined,
+        region: dto.region,
+        workingDays: dto.workingDays,
+        workingHours: dto.workingHours,
+        registryNumber: dto.registryNumber,
         legalName: dto.legalName,
         directorName: dto.directorName,
         email: dto.email,
