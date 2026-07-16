@@ -37,6 +37,7 @@ export class CompanyInfoService {
             ? (dto.socialLinks as unknown as Prisma.InputJsonValue)
             : undefined,
         region: dto.region,
+        city: dto.city,
         workingDays: dto.workingDays,
         workingHours: dto.workingHours,
         registryNumber: dto.registryNumber,

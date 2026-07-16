@@ -91,6 +91,10 @@ export class UpdateCompanyInfoDto {
 
   @IsOptional()
   @IsString()
+  city?: string;
+
+  @IsOptional()
+  @IsString()
   workingDays?: string;
 
   @IsOptional()

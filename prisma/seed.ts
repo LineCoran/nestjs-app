@@ -205,6 +205,7 @@ async function main() {
       { platform: 'wechat', label: 'Группа', value: 'Путешествуй с "Горы по колено"', url: '' },
     ],
     region: 'Камчатский край, Россия',
+    city: 'Петропавловск-Камчатский',
     workingDays: 'Ежедневно',
     workingHours: '09:00 - 22:00 (GMT +12)',
     registryNumber: '024387',

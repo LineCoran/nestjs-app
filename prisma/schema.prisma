@@ -416,6 +416,7 @@ model CompanyInfo {
 
   // Блок «Как найти нас»
   region       String? // «Камчатский край, Россия»
+  city         String? // «Петропавловск-Камчатский» — короткий адрес для сайта (address — юридический)
   workingDays  String? // «Ежедневно»
   workingHours String? // «09:00 - 22:00 (GMT +12)»
 
