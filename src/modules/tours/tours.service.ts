@@ -9,6 +9,12 @@ import { ensureUniqueSlug } from '../../common/utils/slug.util';
 import { CreateTourDto } from './dto/create-tour.dto';
 import { UpdateTourDto } from './dto/update-tour.dto';
 import { QueryToursDto } from './dto/query-tours.dto';
+import { SearchToursDto } from './dto/search-tours.dto';
+import {
+  normalizeForScore,
+  parseSearchQuery,
+  tokenVariants,
+} from '../../common/utils/search.util';
 
 /** Полный набор связей для детальной страницы тура. */
 const TOUR_DETAIL_INCLUDE = {
@@ -56,6 +62,49 @@ const TOUR_CARD_SELECT = {
   },
 } satisfies Prisma.TourSelect;
 
+/** Поля, по которым ранжируется поиск (сами тексты нужны для скоринга). */
+const TOUR_SEARCH_SELECT = {
+  ...TOUR_CARD_SELECT,
+  subtitle: true,
+  aboutText: true,
+  priceOptions: { select: { priceFrom: true, formatName: true } },
+  program: {
+    select: {
+      title: true,
+      description: true,
+      tags: { select: { name: true } },
+    },
+  },
+  features: { select: { feature: { select: { name: true } } } },
+  whatToTake: { select: { item: { select: { name: true } } } },
+  importantInfo: { select: { title: true, description: true } },
+} satisfies Prisma.TourSelect;
+
+type SearchCandidate = Prisma.TourGetPayload<{
+  select: typeof TOUR_SEARCH_SELECT;
+}>;
+
+/** Сколько туров тянем из БД до ранжирования. */
+const SEARCH_CANDIDATE_LIMIT = 60;
+
+export interface TourSearchResult {
+  /** Запрос как его ввёл пользователь. */
+  query: string;
+  /** Как запрос понял бэкенд (нормализация + исправленная раскладка). */
+  interpreted: string;
+  /** Основы слов, по которым шёл поиск — фронт подсвечивает ими совпадения. */
+  tokens: string[];
+  /** Ввод был в латинской раскладке и мы его перевели («rfvxfnrf» → «камчатка»). */
+  layoutFixed: boolean;
+  /** Точных совпадений по всем словам не нашлось — искали по любому из них. */
+  relaxed: boolean;
+  total: number;
+  items: unknown[];
+}
+
+const escapeRegExp = (value: string) =>
+  value.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&');
+
 @Injectable()
 export class ToursService {
   constructor(private readonly prisma: PrismaService) {}
@@ -71,6 +120,64 @@ export class ToursService {
     return this.paginate(where, query);
   }
 
+  /**
+   * «Умный» поиск для шапки сайта: цепляется за название, описание, программу,
+   * категорию, сезон, форматы и справочники, ранжирует результаты по весу поля.
+   */
+  async searchPublished(dto: SearchToursDto): Promise<TourSearchResult> {
+    const { raw, phrase, tokens, layoutFixed } = parseSearchQuery(dto.q);
+    if (!tokens.length) {
+      return {
+        query: raw,
+        interpreted: phrase,
+        tokens,
+        layoutFixed,
+        relaxed: false,
+        total: 0,
+        items: [],
+      };
+    }
+
+    const tokenFilters = tokens.map((token) => this.buildTokenFilter(token));
+
+    // Сначала ищем туры, где встречаются ВСЕ слова запроса…
+    let candidates = await this.findSearchCandidates({
+      isPublished: true,
+      AND: tokenFilters,
+    });
+    let relaxed = false;
+
+    // …и только если таких нет — где встречается хотя бы одно.
+    if (!candidates.length && tokenFilters.length > 1) {
+      candidates = await this.findSearchCandidates({
+        isPublished: true,
+        OR: tokenFilters,
+      });
+      relaxed = true;
+    }
+
+    const items = candidates
+      .map((tour) => this.scoreSearchCandidate(tour, tokens, phrase))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, dto.limit)
+      // score наружу не отдаём — это деталь ранжирования.
+      .map((scored) => {
+        const { score, ...item } = scored;
+        void score;
+        return item;
+      });
+
+    return {
+      query: raw,
+      interpreted: phrase,
+      tokens,
+      layoutFixed,
+      relaxed,
+      total: candidates.length,
+      items,
+    };
+  }
+
   async findBySlug(slug: string) {
     const tour = await this.prisma.tour.findFirst({
       where: { slug, isPublished: true },
@@ -82,7 +189,9 @@ export class ToursService {
 
   // ────────────────────────── Админские методы ────────────────────────
 
-  async findAllForAdmin(query: QueryToursDto): Promise<PaginatedResult<unknown>> {
+  async findAllForAdmin(
+    query: QueryToursDto,
+  ): Promise<PaginatedResult<unknown>> {
     const where: Prisma.TourWhereInput = {
       ...this.buildFilters(query),
       ...(query.isPublished !== undefined
@@ -160,6 +269,174 @@ export class ToursService {
     await this.findOneForAdmin(id);
     await this.prisma.tour.delete({ where: { id } });
     return { success: true };
+  }
+
+  // ─────────────────────────── Поиск: хелперы ─────────────────────────
+
+  /** Условие «токен встречается хотя бы в одном из полей тура». */
+  private buildTokenFilter(token: string): Prisma.TourWhereInput {
+    const or: Prisma.TourWhereInput[] = [];
+
+    for (const value of tokenVariants(token)) {
+      const like = { contains: value, mode: 'insensitive' as const };
+      or.push(
+        { title: like },
+        { subtitle: like },
+        { description: like },
+        { aboutText: like },
+        { season: like },
+        { groupSize: like },
+        { badges: { has: value } },
+        { category: { name: like } },
+        { priceOptions: { some: { formatName: like } } },
+        { program: { some: { OR: [{ title: like }, { description: like }] } } },
+        { program: { some: { tags: { some: { name: like } } } } },
+        { features: { some: { feature: { name: like } } } },
+        { whatToTake: { some: { item: { name: like } } } },
+        {
+          importantInfo: {
+            some: { OR: [{ title: like }, { description: like }] },
+          },
+        },
+      );
+    }
+
+    return { OR: or };
+  }
+
+  /** Кандидаты для ранжирования: считаем score в приложении, поэтому берём с запасом. */
+  private findSearchCandidates(where: Prisma.TourWhereInput) {
+    return this.prisma.tour.findMany({
+      where,
+      select: TOUR_SEARCH_SELECT,
+      take: SEARCH_CANDIDATE_LIMIT,
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  /**
+   * Считает релевантность и определяет, где именно нашлось совпадение
+   * (подпись показывается в выпадашке, если совпало не по названию).
+   */
+  private scoreSearchCandidate(
+    tour: SearchCandidate,
+    tokens: string[],
+    phrase: string,
+  ) {
+    const join = (values: (string | null | undefined)[]) =>
+      normalizeForScore(values.filter(Boolean).join(' '));
+
+    const fields: { label: string | null; weight: number; text: string }[] = [
+      { label: null, weight: 40, text: normalizeForScore(tour.title) },
+      {
+        label: 'Категория',
+        weight: 22,
+        text: normalizeForScore(tour.category?.name),
+      },
+      { label: 'Сезон', weight: 16, text: normalizeForScore(tour.season) },
+      {
+        label: 'В описании',
+        weight: 14,
+        text: join([tour.description, tour.subtitle]),
+      },
+      {
+        label: 'В программе',
+        weight: 12,
+        text: join(
+          tour.program.flatMap((p) => [
+            p.title,
+            p.description,
+            ...p.tags.map((t) => t.name),
+          ]),
+        ),
+      },
+      { label: 'Метка', weight: 10, text: join(tour.badges) },
+      {
+        label: 'Формат тура',
+        weight: 10,
+        text: join(tour.priceOptions.map((p) => p.formatName)),
+      },
+      {
+        label: 'Что входит',
+        weight: 8,
+        text: join(tour.features.map((f) => f.feature.name)),
+      },
+      {
+        label: 'В описании',
+        weight: 6,
+        text: normalizeForScore(tour.aboutText),
+      },
+      {
+        label: 'Что взять с собой',
+        weight: 6,
+        text: join(tour.whatToTake.map((w) => w.item.name)),
+      },
+      {
+        label: 'Важно знать',
+        weight: 5,
+        text: join(tour.importantInfo.flatMap((i) => [i.title, i.description])),
+      },
+    ];
+
+    const title = normalizeForScore(tour.title);
+    let score = 0;
+    let matchedIn: string | null = null;
+    let matchedWeight = 0;
+
+    for (const token of tokens) {
+      let best: (typeof fields)[number] | undefined;
+      for (const field of fields) {
+        if (
+          field.text.includes(token) &&
+          (!best || field.weight > best.weight)
+        ) {
+          best = field;
+        }
+      }
+      if (!best) continue;
+
+      score += best.weight;
+      // Совпадение в начале слова ценнее, чем где-то в середине.
+      if (new RegExp(`(^|\\s)${escapeRegExp(token)}`).test(best.text))
+        score += 6;
+
+      if (best.label && best.weight > matchedWeight) {
+        matchedIn = best.label;
+        matchedWeight = best.weight;
+      }
+    }
+
+    // Полное/префиксное совпадение по названию — сильнее любых частичных.
+    if (title === phrase) score += 80;
+    else if (title.startsWith(phrase)) score += 40;
+
+    // Совпало и по названию тоже — подпись «где нашли» не нужна.
+    if (tokens.some((t) => title.includes(t))) matchedIn = null;
+
+    return {
+      score,
+      id: tour.id,
+      slug: tour.slug,
+      title: tour.title,
+      description: tour.description,
+      coverImage: tour.coverImage,
+      badges: tour.badges,
+      durationDays: tour.durationDays,
+      groupSize: tour.groupSize,
+      difficulty: tour.difficulty,
+      season: tour.season,
+      nearestDate: tour.nearestDate,
+      category: tour.category,
+      // Формат карточки: только минимальная цена, как в TOUR_CARD_SELECT.
+      priceOptions: tour.priceOptions.length
+        ? [
+            {
+              priceFrom: Math.min(...tour.priceOptions.map((p) => p.priceFrom)),
+            },
+          ]
+        : [],
+      matchedIn,
+    };
   }
 
   // ──────────────────────────── Хелперы ───────────────────────────────

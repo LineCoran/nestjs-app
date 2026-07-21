@@ -56,6 +56,63 @@ async function run() {
             { value: '2,5+ тыс.', label: 'туристов' },
             { value: '4.9', label: 'рейтинг' },
           ],
+          // Контакты: страница /contacts и футер берут всё отсюда,
+          // дальше редактируются в админке.
+          contactPhone: '+7 (914) 025-33-48',
+          phones: [
+            '+7 (914) 025-33-48',
+            '+7 (917) 596-96-70',
+            '+7 (924) 794-71-56',
+          ],
+          email: 'Idem-v-gory@yandex.ru',
+          telegramLink: 'https://t.me/gorypokoleno',
+          vkLink: 'https://vk.com/gorypokoleno',
+          socialLinks: [
+            {
+              platform: 'telegram',
+              label: 'Канал',
+              value: 'gory_po_koleno_kamcha',
+              url: 'https://t.me/gory_po_koleno_kamcha',
+            },
+            {
+              platform: 'telegram',
+              label: 'Группа',
+              value: 'PowderFactory',
+              url: 'https://t.me/PowderFactory',
+            },
+            {
+              platform: 'instagram',
+              label: 'Аккаунт',
+              value: '@gory_po_koleno_kamcha',
+              url: 'https://instagram.com/gory_po_koleno_kamcha',
+            },
+            {
+              platform: 'vk',
+              label: 'Группа',
+              value: 'Туры по Камчатке с «Горы по колено»',
+              url: 'https://vk.com/gorypokoleno',
+            },
+            {
+              platform: 'whatsapp',
+              label: 'Группа',
+              value: 'Путешествуй с "Горы по колено"',
+              url: 'https://wa.me/79140253348',
+            },
+          ],
+          region: 'Камчатский край, Россия',
+          city: 'Петропавловск-Камчатский',
+          workingDays: 'Ежедневно',
+          workingHours: '09:00 - 22:00 (GMT +12)',
+          registryNumber: '024387',
+          // Реквизиты (блок «Реквизиты» на странице контактов)
+          legalName: 'Общество с ограниченной ответственностью «Горы по колено»',
+          directorName: 'Гуменюк Дмитрий Богданович',
+          address:
+            '683023, Камчатский край, Петропавловск-Камчатский г. о., г. Петропавловск-Камчатский, ул. Карбышева, д. 3, кв. 253',
+          website: 'gory-po-koleno.ru',
+          inn: '4100040950',
+          kpp: '410001001',
+          ogrn: '1214100004580',
         },
       });
       console.log('✅ Контент компании создан');

@@ -1,6 +1,7 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ToursService } from './tours.service';
 import { QueryToursDto } from './dto/query-tours.dto';
+import { SearchToursDto } from './dto/search-tours.dto';
 
 @Controller('tours')
 export class ToursPublicController {
@@ -15,6 +16,12 @@ export class ToursPublicController {
   @Get('filters')
   filters() {
     return this.toursService.getFilterFacets();
+  }
+
+  /** Умный поиск по турам для шапки сайта. Тоже должен быть объявлен до `:slug`. */
+  @Get('search')
+  search(@Query() query: SearchToursDto) {
+    return this.toursService.searchPublished(query);
   }
 
   @Get(':slug')

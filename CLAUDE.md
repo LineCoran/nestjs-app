@@ -26,6 +26,7 @@ npm run lint
 
 - Модули в `src/modules/<name>/`, у большинства **раздельные публичный и админский контроллеры** (`/api/...` без авторизации, `/api/admin/...` под `JwtAuthGuard` из `modules/auth`).
 - Модули: `auth` (JWT), `tours`, `tour-categories`, `tour-features` (справочник), `program-tags` (справочник), `what-to-take` (категории+пункты), `blog`, `guides`, `company-info` (singleton), `bookings`, `upload` (multipart jpg/png/webp в `/uploads`, раздаётся ServeStatic).
+- **Умный поиск:** `GET /api/tours/search?q=&limit=` (`ToursService.searchPublished` + `common/utils/search.util.ts`). Без full-text и расширений Postgres: нормализация (ё→е, латинская раскладка «rfvxfnrf» → «камчатка»), лёгкий стемминг окончаний, `contains` по названию/описанию/программе/категории/сезону/форматам/справочникам, скоринг по весу поля в приложении. Если по всем словам пусто — повтор по любому из слов (`relaxed: true`). Роут объявлен **до** `:slug`.
 - `PrismaService` — pg-адаптер (`@prisma/adapter-pg` + `pg`). `main.ts`: префикс `/api`, `ValidationPipe({whitelist,transform})`, CORS из `CORS_ORIGINS`.
 - **WebSocket:** `modules/bookings/bookings.gateway.ts` — при создании заявки шлёт `booking:new` (JWT-handshake). Тот же порт 3000, путь `/socket.io`.
 - Утилиты: `common/utils/slug.util.ts` (транслит кириллицы + уникальность), `common/dto/pagination.dto.ts` (limit ≤ 100).
