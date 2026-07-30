@@ -1,5 +1,24 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { IsInt, IsNotEmpty, IsOptional, IsString, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsArray,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Min,
+  ValidateNested,
+} from 'class-validator';
+
+export class GuideTagDto {
+  @IsString()
+  @IsNotEmpty()
+  label: string; // например «Альпинизм»
+
+  @IsOptional()
+  @IsString()
+  icon?: string; // kebab-case имя иконки lucide, например «mountain»
+}
 
 export class CreateGuideDto {
   @IsString()
@@ -14,9 +33,21 @@ export class CreateGuideDto {
   @IsString()
   photo?: string;
 
+  /** Короткое описание — карточка на главной и в «Команде». */
   @IsOptional()
   @IsString()
   description?: string;
+
+  /** Развёрнутое описание — страница «О нас». */
+  @IsOptional()
+  @IsString()
+  fullDescription?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GuideTagDto)
+  tags?: GuideTagDto[];
 
   @IsOptional()
   @IsInt()

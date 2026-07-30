@@ -377,8 +377,15 @@ model Guide {
   name        String
   role        String? // должность
   photo       String?
-  description String?
+  description String? // короткое описание — карточка на главной и в «Команде»
   order       Int     @default(0)
+
+  // Развёрнутое описание — только страница «О нас». Пустое = показываем description,
+  // чтобы правка короткого текста не ломала страницу и наоборот.
+  fullDescription String?
+
+  // Теги гида для страницы «О нас»: [{ label, icon }], icon — kebab-case имя из lucide
+  tags Json @default("[]")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
