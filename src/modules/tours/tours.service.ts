@@ -36,6 +36,15 @@ const TOUR_DETAIL_INCLUDE = {
       coverImage: true,
       badges: true,
       durationDays: true,
+      season: true,
+      earlyBooking: true,
+      hidePrice: true,
+      // Цена нужна карточке «с туром чаще выбирают» — как в макете.
+      priceOptions: {
+        select: { priceFrom: true },
+        orderBy: { priceFrom: 'asc' },
+        take: 1,
+      },
     },
   },
 } satisfies Prisma.TourInclude;
@@ -53,6 +62,8 @@ const TOUR_CARD_SELECT = {
   difficulty: true,
   season: true,
   nearestDate: true,
+  earlyBooking: true,
+  hidePrice: true,
   isPublished: true,
   category: { select: { id: true, name: true, slug: true } },
   priceOptions: {
@@ -426,6 +437,8 @@ export class ToursService {
       difficulty: tour.difficulty,
       season: tour.season,
       nearestDate: tour.nearestDate,
+      earlyBooking: tour.earlyBooking,
+      hidePrice: tour.hidePrice,
       category: tour.category,
       // Формат карточки: только минимальная цена, как в TOUR_CARD_SELECT.
       priceOptions: tour.priceOptions.length
@@ -569,6 +582,8 @@ export class ToursService {
       nearestDate: dto.nearestDate ? new Date(dto.nearestDate) : undefined,
       badges: dto.badges,
       aboutText: dto.aboutText,
+      earlyBooking: dto.earlyBooking,
+      hidePrice: dto.hidePrice,
       category: dto.categoryId
         ? { connect: { id: dto.categoryId } }
         : undefined,

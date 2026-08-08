@@ -24,7 +24,13 @@ export class StorageService {
     '',
   );
   private readonly acl = process.env.S3_ACL || ''; // напр. public-read для AWS; при публичном bucket'е оставить пустым
-  private readonly dir = process.env.UPLOAD_DIR || 'media';
+  /**
+   * Дефолт обязан совпадать с UPLOAD_DIR в app.module.ts: там на этот каталог
+   * навешана раздача статики. Раньше здесь было 'media' — файл сохранялся в
+   * ./media и отдавался ссылкой /media/<file>, а сервер отдаёт только /uploads,
+   * поэтому загруженная обложка не открывалась (404) и карточка была пустой.
+   */
+  private readonly dir = process.env.UPLOAD_DIR || 'uploads';
 
   constructor() {
     const endpoint = process.env.S3_ENDPOINT;

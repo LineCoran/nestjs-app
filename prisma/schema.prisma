@@ -77,6 +77,9 @@ model Tour {
   badges    String[] @default([]) // метки-бейджи: «новинка», «хит» и т.д.
   aboutText String? // расширенное описание «О туре» (rich text / HTML)
 
+  earlyBooking String? // тег раннего бронирования на карточке, например «открыто бронирование на 2027»
+  hidePrice    Boolean @default(false) // прятать цену в карточке (короткий вариант карточки)
+
   category   TourCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   categoryId String?
 

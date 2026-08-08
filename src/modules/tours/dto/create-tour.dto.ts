@@ -149,6 +149,16 @@ export class CreateTourDto {
   @IsString()
   aboutText?: string;
 
+  /** Тег раннего бронирования на карточке, например «открыто бронирование на 2027». */
+  @IsOptional()
+  @IsString()
+  earlyBooking?: string;
+
+  /** Короткий вариант карточки — без цены. */
+  @IsOptional()
+  @IsBoolean()
+  hidePrice?: boolean;
+
   @IsOptional()
   @IsString()
   categoryId?: string;
