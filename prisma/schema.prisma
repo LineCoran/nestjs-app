@@ -48,6 +48,7 @@ enum BookingStatus {
 enum BookingType {
   BOOKING // заявка на бронирование / подбор тура
   QUESTION // вопрос со страницы информации
+  GIFT_CERTIFICATE // подарочный сертификат со страницы «Подарочные сертификаты»
 }
 
 enum ImportantInfoType {
@@ -319,6 +320,8 @@ model Booking {
 
   preferences     String[] @default([]) // теги предпочтений для «индивидуально»
   isCustomRequest Boolean  @default(false)
+
+  certificateAmount Int? // номинал подарочного сертификата в рублях (тип GIFT_CERTIFICATE)
 
   totalPrice Int?
 

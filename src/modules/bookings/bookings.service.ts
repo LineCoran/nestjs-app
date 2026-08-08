@@ -48,6 +48,7 @@ export class BookingsService {
         comment: dto.comment,
         preferences: dto.preferences ?? [],
         isCustomRequest: dto.isCustomRequest ?? false,
+        certificateAmount: dto.certificateAmount,
         totalPrice,
       },
       include: BOOKING_INCLUDE,

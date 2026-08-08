@@ -72,6 +72,12 @@ export class CreateBookingDto {
   @IsOptional()
   @IsBoolean()
   isCustomRequest?: boolean;
+
+  /** Номинал подарочного сертификата в рублях — поле необязательное. */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  certificateAmount?: number;
 }
 
 export class UpdateBookingStatusDto {
