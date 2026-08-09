@@ -393,7 +393,6 @@ async function main() {
             maxGroupSize: rand(6, 14),
           })),
         },
-        sessions: { create: makeSessions(t.month, t.days, rand(3, 5)) },
         importantInfo: {
           create: importantTemplate.map((info, idx) => ({ ...info, type: info.type as any, order: idx })),
         },
@@ -408,6 +407,22 @@ async function main() {
         },
       },
     });
+    // Даты заездов принадлежат формату (у джипов и вертолёта они свои),
+    // поэтому создаём их после тура — когда известны id форматов.
+    const formats = await prisma.tourPriceOption.findMany({
+      where: { tourId: tour.id },
+      select: { id: true },
+    });
+    for (const format of formats) {
+      await prisma.tourSession.createMany({
+        data: makeSessions(t.month, t.days, rand(3, 5)).map((s) => ({
+          ...s,
+          tourId: tour.id,
+          priceOptionId: format.id,
+        })),
+      });
+    }
+
     createdTourIds.push(tour.id);
   }
 

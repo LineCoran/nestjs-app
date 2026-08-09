@@ -47,6 +47,17 @@ export class TourSessionDto {
 
   @IsEnum(DateAvailability)
   availability: DateAvailability;
+
+  /**
+   * Формат тура, к которому относится заезд, — индекс в массиве `priceOptions`
+   * этого же запроса. Не id: форматы при сохранении пересоздаются, их id
+   * появляются только после вставки, поэтому связь идёт по позиции.
+   * Не передан — заезд общий для всех форматов.
+   */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  priceOptionIndex?: number;
 }
 
 export class TourPriceOptionDto {

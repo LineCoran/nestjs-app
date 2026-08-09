@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
 import {
@@ -27,6 +31,8 @@ export class BookingsService {
   ) {}
 
   async create(dto: CreateBookingDto) {
+    await this.assertSessionMatchesFormat(dto);
+
     const totalPrice = await this.calculateTotalPrice(
       dto.priceOptionId,
       dto.peopleCount,
@@ -93,6 +99,25 @@ export class BookingsService {
     const booking = await this.prisma.booking.findUnique({ where: { id } });
     if (!booking) throw new NotFoundException(`Заявка с ID ${id} не найдена`);
     return booking;
+  }
+
+  /**
+   * Даты заездов принадлежат формату тура, поэтому заявка не может ссылаться на
+   * заезд чужого формата. Заезд без формата (общий для тура) подходит любому.
+   */
+  private async assertSessionMatchesFormat(dto: CreateBookingDto) {
+    if (!dto.sessionId || !dto.priceOptionId) return;
+
+    const session = await this.prisma.tourSession.findUnique({
+      where: { id: dto.sessionId },
+      select: { priceOptionId: true },
+    });
+
+    if (session?.priceOptionId && session.priceOptionId !== dto.priceOptionId) {
+      throw new BadRequestException(
+        'Выбранный заезд относится к другому формату тура',
+      );
+    }
   }
 
   /** Итоговая стоимость = priceFrom выбранного формата × количество человек. */

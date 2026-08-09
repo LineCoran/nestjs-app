@@ -168,6 +168,7 @@ model TourPriceOption {
   tour   Tour   @relation(fields: [tourId], references: [id], onDelete: Cascade)
   tourId String
 
+  sessions TourSession[] // заезды именно этого формата
   bookings Booking[]
 
   @@index([tourId])
@@ -185,9 +186,17 @@ model TourSession {
   tour   Tour   @relation(fields: [tourId], references: [id], onDelete: Cascade)
   tourId String
 
+  // Формат тура, к которому привязан заезд: у джипов и вертолёта свои даты.
+  // null — заезд общий для всех форматов (так лежат данные, заведённые до
+  // привязки, и так админка помечает «Все форматы»).
+  // Cascade: удалили формат — его даты уходят вместе с ним.
+  priceOption   TourPriceOption? @relation(fields: [priceOptionId], references: [id], onDelete: Cascade)
+  priceOptionId String?
+
   bookings Booking[]
 
   @@index([tourId])
+  @@index([priceOptionId])
   @@index([dateFrom])
   @@map("tour_sessions")
 }

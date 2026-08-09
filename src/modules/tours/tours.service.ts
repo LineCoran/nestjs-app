@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
 import {
@@ -227,24 +231,34 @@ export class ToursService {
       this.slugExists(s),
     );
 
-    return this.prisma.tour.create({
-      data: {
-        ...this.buildScalarData(dto),
-        slug,
-        title: dto.title,
-        durationDays: dto.durationDays,
-        difficulty: dto.difficulty,
-        ...this.buildNestedWrites(dto),
-        relatedTours: dto.relatedTourIds?.length
-          ? { connect: dto.relatedTourIds.map((id) => ({ id })) }
-          : undefined,
-      },
-      include: TOUR_DETAIL_INCLUDE,
+    return this.prisma.$transaction(async (tx) => {
+      const tour = await tx.tour.create({
+        data: {
+          ...this.buildScalarData(dto),
+          slug,
+          title: dto.title,
+          durationDays: dto.durationDays,
+          difficulty: dto.difficulty,
+          ...this.buildNestedWrites(dto),
+          relatedTours: dto.relatedTourIds?.length
+            ? { connect: dto.relatedTourIds.map((id) => ({ id })) }
+            : undefined,
+        },
+        select: { id: true },
+      });
+
+      await this.writeFormatsWithSessions(tx, tour.id, dto);
+
+      return tx.tour.findUniqueOrThrow({
+        where: { id: tour.id },
+        include: TOUR_DETAIL_INCLUDE,
+      });
     });
   }
 
   async update(id: string, dto: UpdateTourDto) {
     await this.findOneForAdmin(id);
+    await this.assertFormatsAndSessionsGoTogether(id, dto);
 
     const slug =
       dto.slug !== undefined
@@ -257,7 +271,7 @@ export class ToursService {
     return this.prisma.$transaction(async (tx) => {
       await this.clearReplacedRelations(tx, id, dto);
 
-      return tx.tour.update({
+      await tx.tour.update({
         where: { id },
         data: {
           ...this.buildScalarData(dto),
@@ -271,6 +285,13 @@ export class ToursService {
               }
             : {}),
         },
+        select: { id: true },
+      });
+
+      await this.writeFormatsWithSessions(tx, id, dto);
+
+      return tx.tour.findUniqueOrThrow({
+        where: { id },
         include: TOUR_DETAIL_INCLUDE,
       });
     });
@@ -591,6 +612,88 @@ export class ToursService {
     };
   }
 
+  /**
+   * Форматы и заезды пишем отдельно от прочих вложенных коллекций: заезд
+   * привязан к формату (`priceOptionIndex` — позиция в `priceOptions` этого же
+   * запроса), а id формата известен только после вставки. Поэтому форматы
+   * создаём по одному, запоминая id в порядке прихода, и только потом заезды.
+   */
+  private async writeFormatsWithSessions(
+    tx: Prisma.TransactionClient,
+    tourId: string,
+    dto: CreateTourDto | UpdateTourDto,
+  ) {
+    const optionIds: string[] = [];
+
+    if (dto.priceOptions !== undefined) {
+      for (const option of dto.priceOptions) {
+        const created = await tx.tourPriceOption.create({
+          data: {
+            tourId,
+            formatName: option.formatName,
+            priceFrom: option.priceFrom,
+            maxGroupSize: option.maxGroupSize,
+          },
+          select: { id: true },
+        });
+        optionIds.push(created.id);
+      }
+    }
+
+    if (dto.sessions === undefined) return;
+
+    const sessions = dto.sessions.map((session) => {
+      const index = session.priceOptionIndex;
+
+      if (index !== undefined && dto.priceOptions === undefined) {
+        throw new BadRequestException(
+          'priceOptionIndex ссылается на priceOptions того же запроса — передайте форматы вместе с заездами',
+        );
+      }
+      if (index !== undefined && index >= optionIds.length) {
+        throw new BadRequestException(
+          `Заезд ссылается на несуществующий формат (priceOptionIndex: ${index})`,
+        );
+      }
+
+      return {
+        tourId,
+        dateFrom: new Date(session.dateFrom),
+        dateTo: new Date(session.dateTo),
+        availability: session.availability,
+        // Без индекса заезд остаётся общим для всех форматов тура.
+        priceOptionId: index !== undefined ? optionIds[index] : null,
+      };
+    });
+
+    if (sessions.length) await tx.tourSession.createMany({ data: sessions });
+  }
+
+  /**
+   * Форматы и заезды пересоздаются вместе, поэтому и приходить должны вместе:
+   * прислали одни форматы — каскад унесёт их даты; прислали одни заезды —
+   * привязывать их будет не к чему (индекс формата ссылается на этот же
+   * запрос), и даты молча станут общими. У тура без привязанных заездов
+   * терять нечего — там частичное обновление по-прежнему разрешено.
+   */
+  private async assertFormatsAndSessionsGoTogether(
+    tourId: string,
+    dto: UpdateTourDto,
+  ) {
+    if ((dto.priceOptions !== undefined) === (dto.sessions !== undefined)) {
+      return;
+    }
+
+    const bound = await this.prisma.tourSession.count({
+      where: { tourId, priceOptionId: { not: null } },
+    });
+    if (bound) {
+      throw new BadRequestException(
+        'Заезды привязаны к форматам тура: передавайте priceOptions и sessions вместе',
+      );
+    }
+  }
+
   /** Вложенные create-блоки для тех коллекций, что переданы в DTO. */
   private buildNestedWrites(dto: CreateTourDto | UpdateTourDto) {
     return {
@@ -604,28 +707,6 @@ export class ToursService {
                 tags: item.tagIds?.length
                   ? { connect: item.tagIds.map((id) => ({ id })) }
                   : undefined,
-              })),
-            },
-          }
-        : {}),
-      ...(dto.priceOptions !== undefined
-        ? {
-            priceOptions: {
-              create: dto.priceOptions.map((option) => ({
-                formatName: option.formatName,
-                priceFrom: option.priceFrom,
-                maxGroupSize: option.maxGroupSize,
-              })),
-            },
-          }
-        : {}),
-      ...(dto.sessions !== undefined
-        ? {
-            sessions: {
-              create: dto.sessions.map((session) => ({
-                dateFrom: new Date(session.dateFrom),
-                dateTo: new Date(session.dateTo),
-                availability: session.availability,
               })),
             },
           }
