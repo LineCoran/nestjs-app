@@ -460,6 +460,11 @@ model CompanyInfo {
   correspondentAccount String? // корреспондентский счёт
   bic                  String?
 
+  // Баннеры главной страницы, настраиваются в админке:
+  // { cta: {...}, gift: {...} } — тексты, цвета, высота, анимация, кнопки.
+  // Не заданные поля сайт берёт из стандартного дизайна.
+  banners Json @default("{}")
+
   updatedAt DateTime @updatedAt
 
   @@map("company_info")

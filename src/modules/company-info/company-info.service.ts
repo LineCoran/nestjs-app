@@ -53,6 +53,20 @@ export class CompanyInfoService {
         settlementAccount: dto.settlementAccount,
         correspondentAccount: dto.correspondentAccount,
         bic: dto.bic,
+        // Баннеры приходят целиком — сливаем по ключам, чтобы правка одного
+        // баннера не стирала другой.
+        banners:
+          dto.banners !== undefined
+            ? {
+                ...((current.banners as Record<string, unknown>) ?? {}),
+                // undefined-ключи (баннер не прислали) не затирают сохранённый.
+                ...Object.fromEntries(
+                  Object.entries(dto.banners).filter(
+                    ([, v]) => v !== undefined,
+                  ),
+                ),
+              }
+            : undefined,
       },
     });
   }
