@@ -142,6 +142,18 @@ model TourProgramItem {
   @@map("tour_program_items")
 }
 
+// Каталог иконок сайта: небольшой отобранный список из lucide, которым
+// пользуются все выборы иконок в админке (теги гидов, услуги и т.д.).
+model SiteIcon {
+  id    String  @id @default(uuid())
+  name  String  @unique // kebab-case имя иконки lucide: «mountain», «map-pin»
+  label String? // русская подпись для поиска: «Гора», «Метка на карте»
+
+  createdAt DateTime @default(now())
+
+  @@map("site_icons")
+}
+
 // Справочник тегов программы (создаётся в админке, переиспользуется)
 model ProgramTag {
   id   String @id @default(uuid())

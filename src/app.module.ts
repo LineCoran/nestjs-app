@@ -9,6 +9,7 @@ import { ToursModule } from './modules/tours/tours.module';
 import { TourCategoriesModule } from './modules/tour-categories/tour-categories.module';
 import { TourFeaturesModule } from './modules/tour-features/tour-features.module';
 import { ProgramTagsModule } from './modules/program-tags/program-tags.module';
+import { SiteIconsModule } from './modules/site-icons/site-icons.module';
 import { WhatToTakeModule } from './modules/what-to-take/what-to-take.module';
 import { BlogModule } from './modules/blog/blog.module';
 import { GuidesModule } from './modules/guides/guides.module';
@@ -32,6 +33,7 @@ const UPLOAD_DIR = process.env.UPLOAD_DIR || 'uploads';
     TourCategoriesModule,
     TourFeaturesModule,
     ProgramTagsModule,
+    SiteIconsModule,
     WhatToTakeModule,
     BlogModule,
     GuidesModule,
