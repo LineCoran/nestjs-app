@@ -69,10 +69,18 @@ export class TourPriceOptionDto {
   @Min(0)
   priceFrom: number;
 
-  @IsOptional()
+  /** Продолжительность формата в днях. */
   @IsInt()
   @Min(1)
-  maxGroupSize?: number;
+  durationDays: number;
+
+  /** Размер группы текстом: «до 4 чел.» у джипа, «до 20 чел.» у автобуса. */
+  @IsOptional()
+  @IsString()
+  groupSize?: string;
+
+  @IsEnum(Difficulty)
+  difficulty: Difficulty;
 }
 
 export class ImportantInfoItemDto {
@@ -132,24 +140,12 @@ export class CreateTourDto {
   @IsString({ each: true })
   gallery?: string[];
 
-  @IsInt()
-  @Min(1)
-  durationDays: number;
-
-  @IsOptional()
-  @IsString()
-  groupSize?: string;
-
-  @IsEnum(Difficulty)
-  difficulty: Difficulty;
+  // Длительность, группа и сложность задаются у формата (priceOptions[]),
+  // ближайшая дата считается из заездов — на уровне тура их нет.
 
   @IsOptional()
   @IsString()
   season?: string;
-
-  @IsOptional()
-  @IsISO8601()
-  nearestDate?: string;
 
   @IsOptional()
   @IsArray()

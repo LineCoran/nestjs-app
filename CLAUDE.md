@@ -37,8 +37,10 @@ npm run lint
 - `included`/`excluded` — **не массивы**, а общий справочник `TourFeature` + связь `TourFeatureLink { inclusion: INCLUDED|EXCLUDED, note, order }`.
 - «Что взять» — `WhatToTakeCategory` 1—N `WhatToTakeItem` + `TourWhatToTakeLink`.
 - Теги программы — справочник `ProgramTag`, m2m с `TourProgramItem`.
-- Даты заездов — `TourSession { tourId, dateFrom, dateTo, availability }` напрямую у тура (НЕ вложены в цены). `TourPriceOption` (форматы/цены) независимы. `Booking` ссылается и на `sessionId`, и на `priceOptionId`.
+- Даты заездов — `TourSession { tourId, dateFrom, dateTo, availability, priceOptionId? }`: заезд **привязан к формату** (`TourPriceOption`), у джипов и вертолёта свои даты. `priceOptionId = null` — заезд общий для всех форматов (так лежат данные, заведённые до привязки). FK `onDelete: Cascade` — удалили формат, ушли и его даты. `Booking` ссылается и на `sessionId`, и на `priceOptionId`; заявку с заездом чужого формата сервис не принимает.
+- **Параметры тура — у формата**: `durationDays`, `groupSize` (текст «до 4 чел.»), `difficulty`, `order` лежат в `TourPriceOption`, на `Tour` их нет. Ближайшая дата не хранится — считается из заездов формата. Карточкам в списках/поиске/«чаще выбирают» сервис добавляет сводку `durationDays/groupSize/difficulty` самого дешёвого формата (`withFormatSummary`). Фильтры каталога по формату/цене/сложности/длительности проверяются на одном и том же формате.
 - Создание/обновление тура: `features[]`, `whatToTakeItemIds[]`, `program[].tagIds[]`, `sessions[]`, `priceOptions[]`, `relatedTourIds[]`; вложенные коллекции пересоздаются в транзакции.
+- ⚠️ `sessions[].priceOptionIndex` — **индекс в `priceOptions` этого же запроса**, а не id: форматы при сохранении пересоздаются, id известны только после вставки. Поэтому форматы и заезды пишет `ToursService.writeFormatsWithSessions` (по одному, вне `buildNestedWrites`), а PATCH требует передавать `priceOptions` и `sessions` вместе — иначе 400, чтобы даты не потерялись молча.
 
 ⚠️ `schema.prisma` пару раз откатывался стейл-буфером IDE — следить, чтобы не перезатёрся.
 

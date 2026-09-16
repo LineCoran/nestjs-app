@@ -369,11 +369,7 @@ async function main() {
         description: `${t.place[0].toUpperCase()}${t.place.slice(1)}, горячие источники и атмосфера дикой природы.`,
         coverImage: img(`tour-cover-${slugBase}`, 900, 600),
         gallery: Array.from({ length: galleryCount }, (_, i) => img(`tour-${slugBase}-${i}`, 1200, 760)),
-        durationDays: t.days,
-        groupSize: `${rand(4, 8)}-${rand(9, 14)} чел.`,
-        difficulty: t.diff as any,
         season: t.season,
-        nearestDate: new Date(Date.UTC(2026, t.month - 1, rand(5, 20))),
         badges: [...t.badges],
         aboutText: `<p>Приглашаем в захватывающее путешествие по Камчатке! Вы посетите ${t.place}, прогуляетесь по уникальным природным местам и, возможно, встретите медведей в их естественной среде обитания.</p><p>Это незабываемое приключение оставит яркие впечатления на всю жизнь.</p>`,
         isPublished: true,
@@ -387,10 +383,14 @@ async function main() {
           })),
         },
         priceOptions: {
-          create: t.prices.map(([formatName, priceFrom]) => ({
+          // Параметры — у формата: у джипов группа меньше, чем у автобуса.
+          create: t.prices.map(([formatName, priceFrom], order) => ({
+            order,
             formatName: formatName as string,
             priceFrom: priceFrom as number,
-            maxGroupSize: rand(6, 14),
+            durationDays: t.days,
+            groupSize: `до ${/джип/i.test(String(formatName)) ? rand(4, 6) : rand(10, 20)} чел.`,
+            difficulty: t.diff as any,
           })),
         },
         importantInfo: {

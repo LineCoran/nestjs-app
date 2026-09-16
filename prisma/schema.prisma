@@ -69,11 +69,9 @@ model Tour {
   coverImage  String? // обложка
   gallery     String[] @default([]) // массив URL изображений галереи
 
-  durationDays Int // продолжительность в днях
-  groupSize    String? // размер группы текстом, например «8-12 чел.»
-  difficulty   Difficulty @default(MEDIUM)
-  season       String? // сезон проведения, например «июн-сен»
-  nearestDate  DateTime? // дата ближайшего тура
+  // Длительность, размер группы и сложность — у каждого формата свои (TourPriceOption),
+  // ближайшая дата считается из заездов (TourSession). На туре их больше нет.
+  season String? // сезон проведения, например «июн-сен»
 
   badges    String[] @default([]) // метки-бейджи: «новинка», «хит» и т.д.
   aboutText String? // расширенное описание «О туре» (rich text / HTML)
@@ -163,7 +161,10 @@ model TourPriceOption {
 
   formatName   String // «Вахтовый автобус», «Джипы», «Вертолёт»
   priceFrom    Int // цена «от» за человека
-  maxGroupSize Int?
+  order        Int        @default(0) // порядок форматов, как в админке; первый — формат по умолчанию на странице тура
+  durationDays Int        @default(1) // продолжительность в днях
+  groupSize    String? // размер группы текстом: у джипа «до 4 чел.», у автобуса «до 20 чел.»
+  difficulty   Difficulty @default(MEDIUM)
 
   tour   Tour   @relation(fields: [tourId], references: [id], onDelete: Cascade)
   tourId String

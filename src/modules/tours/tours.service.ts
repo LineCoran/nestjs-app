@@ -20,11 +20,19 @@ import {
   tokenVariants,
 } from '../../common/utils/search.util';
 
+/** Поля формата, из которых собирается сводка для карточки (см. withFormatSummary). */
+const FORMAT_SUMMARY_SELECT = {
+  priceFrom: true,
+  durationDays: true,
+  groupSize: true,
+  difficulty: true,
+} satisfies Prisma.TourPriceOptionSelect;
+
 /** Полный набор связей для детальной страницы тура. */
 const TOUR_DETAIL_INCLUDE = {
   category: true,
   program: { include: { tags: true }, orderBy: { order: 'asc' } },
-  priceOptions: true,
+  priceOptions: { orderBy: { order: 'asc' } },
   sessions: { orderBy: { dateFrom: 'asc' } },
   importantInfo: { orderBy: { order: 'asc' } },
   features: { include: { feature: true }, orderBy: { order: 'asc' } },
@@ -39,13 +47,12 @@ const TOUR_DETAIL_INCLUDE = {
       title: true,
       coverImage: true,
       badges: true,
-      durationDays: true,
       season: true,
       earlyBooking: true,
       hidePrice: true,
       // Цена нужна карточке «с туром чаще выбирают» — как в макете.
       priceOptions: {
-        select: { priceFrom: true },
+        select: FORMAT_SUMMARY_SELECT,
         orderBy: { priceFrom: 'asc' },
         take: 1,
       },
@@ -61,17 +68,14 @@ const TOUR_CARD_SELECT = {
   description: true,
   coverImage: true,
   badges: true,
-  durationDays: true,
-  groupSize: true,
-  difficulty: true,
   season: true,
-  nearestDate: true,
   earlyBooking: true,
   hidePrice: true,
   isPublished: true,
   category: { select: { id: true, name: true, slug: true } },
+  // Самый дешёвый формат: его цена «от» и его параметры попадают в карточку.
   priceOptions: {
-    select: { priceFrom: true },
+    select: FORMAT_SUMMARY_SELECT,
     orderBy: { priceFrom: 'asc' },
     take: 1,
   },
@@ -82,7 +86,7 @@ const TOUR_SEARCH_SELECT = {
   ...TOUR_CARD_SELECT,
   subtitle: true,
   aboutText: true,
-  priceOptions: { select: { priceFrom: true, formatName: true } },
+  priceOptions: { select: { ...FORMAT_SUMMARY_SELECT, formatName: true } },
   program: {
     select: {
       title: true,
@@ -115,6 +119,30 @@ export interface TourSearchResult {
   relaxed: boolean;
   total: number;
   items: unknown[];
+}
+
+type FormatSummarySource = Prisma.TourPriceOptionGetPayload<{
+  select: typeof FORMAT_SUMMARY_SELECT;
+}>;
+
+/**
+ * Длительность, группа и сложность живут у формата тура. Карточке в списках
+ * нужна одна строка параметров — берём их у самого дешёвого формата, того же,
+ * чья цена стоит «от» на карточке. Без форматов параметров нет (null).
+ */
+function withFormatSummary<T extends { priceOptions: FormatSummarySource[] }>(
+  tour: T,
+) {
+  const cheapest = tour.priceOptions.reduce<FormatSummarySource | null>(
+    (min, option) => (!min || option.priceFrom < min.priceFrom ? option : min),
+    null,
+  );
+  return {
+    ...tour,
+    durationDays: cheapest?.durationDays ?? null,
+    groupSize: cheapest?.groupSize ?? null,
+    difficulty: cheapest?.difficulty ?? null,
+  };
 }
 
 const escapeRegExp = (value: string) =>
@@ -199,7 +227,7 @@ export class ToursService {
       include: TOUR_DETAIL_INCLUDE,
     });
     if (!tour) throw new NotFoundException(`Тур «${slug}» не найден`);
-    return tour;
+    return this.withRelatedSummary(tour);
   }
 
   // ────────────────────────── Админские методы ────────────────────────
@@ -223,7 +251,7 @@ export class ToursService {
       include: TOUR_DETAIL_INCLUDE,
     });
     if (!tour) throw new NotFoundException(`Тур с ID ${id} не найден`);
-    return tour;
+    return this.withRelatedSummary(tour);
   }
 
   async create(dto: CreateTourDto) {
@@ -237,8 +265,6 @@ export class ToursService {
           ...this.buildScalarData(dto),
           slug,
           title: dto.title,
-          durationDays: dto.durationDays,
-          difficulty: dto.difficulty,
           ...this.buildNestedWrites(dto),
           relatedTours: dto.relatedTourIds?.length
             ? { connect: dto.relatedTourIds.map((id) => ({ id })) }
@@ -317,7 +343,7 @@ export class ToursService {
         { description: like },
         { aboutText: like },
         { season: like },
-        { groupSize: like },
+        { priceOptions: { some: { groupSize: like } } },
         { badges: { has: value } },
         { category: { name: like } },
         { priceOptions: { some: { formatName: like } } },
@@ -445,6 +471,8 @@ export class ToursService {
     // Совпало и по названию тоже — подпись «где нашли» не нужна.
     if (tokens.some((t) => title.includes(t))) matchedIn = null;
 
+    const summary = withFormatSummary(tour);
+
     return {
       score,
       id: tour.id,
@@ -453,11 +481,10 @@ export class ToursService {
       description: tour.description,
       coverImage: tour.coverImage,
       badges: tour.badges,
-      durationDays: tour.durationDays,
-      groupSize: tour.groupSize,
-      difficulty: tour.difficulty,
+      durationDays: summary.durationDays,
+      groupSize: summary.groupSize,
+      difficulty: summary.difficulty,
       season: tour.season,
-      nearestDate: tour.nearestDate,
       earlyBooking: tour.earlyBooking,
       hidePrice: tour.hidePrice,
       category: tour.category,
@@ -492,7 +519,12 @@ export class ToursService {
       }),
       this.prisma.tour.count({ where }),
     ]);
-    return buildPaginatedResult(items, total, query.page, query.limit);
+    return buildPaginatedResult(
+      items.map(withFormatSummary),
+      total,
+      query.page,
+      query.limit,
+    );
   }
 
   /** Общие фильтры каталога (категория, поиск, сложность, сезон, формат, особенности, длительность, цена). */
@@ -505,26 +537,31 @@ export class ToursService {
     if (query.durationMin !== undefined) durationFilter.gte = query.durationMin;
     if (query.durationMax !== undefined) durationFilter.lte = query.durationMax;
 
+    // Формат, цена, сложность и длительность — свойства одного формата тура,
+    // поэтому проверяем их на одном и том же формате: «джипы до 50 000 на 3 дня».
+    // (Раньше формат и цена писались в один ключ priceOptions и цена затирала формат.)
+    const optionFilter: Prisma.TourPriceOptionWhereInput = {
+      ...(query.formats?.length ? { formatName: { in: query.formats } } : {}),
+      ...(query.difficulty?.length
+        ? { difficulty: { in: query.difficulty } }
+        : {}),
+      ...(Object.keys(durationFilter).length
+        ? { durationDays: durationFilter }
+        : {}),
+      ...(Object.keys(priceFilter).length ? { priceFrom: priceFilter } : {}),
+    };
+
     return {
       ...(query.category ? { category: { slug: query.category } } : {}),
       ...(query.search
         ? { title: { contains: query.search, mode: 'insensitive' } }
         : {}),
-      ...(query.difficulty?.length
-        ? { difficulty: { in: query.difficulty } }
-        : {}),
       ...(query.seasons?.length ? { season: { in: query.seasons } } : {}),
-      ...(query.formats?.length
-        ? { priceOptions: { some: { formatName: { in: query.formats } } } }
-        : {}),
       ...(query.features?.length
         ? { features: { some: { featureId: { in: query.features } } } }
         : {}),
-      ...(Object.keys(durationFilter).length
-        ? { durationDays: durationFilter }
-        : {}),
-      ...(Object.keys(priceFilter).length
-        ? { priceOptions: { some: { priceFrom: priceFilter } } }
+      ...(Object.keys(optionFilter).length
+        ? { priceOptions: { some: optionFilter } }
         : {}),
     };
   }
@@ -533,7 +570,7 @@ export class ToursService {
   async getFilterFacets() {
     const where: Prisma.TourWhereInput = { isPublished: true };
 
-    const [tours, features, priceAgg, durationAgg] = await Promise.all([
+    const [tours, features, formatAgg] = await Promise.all([
       this.prisma.tour.findMany({
         where,
         select: {
@@ -548,13 +585,8 @@ export class ToursService {
       }),
       this.prisma.tourPriceOption.aggregate({
         where: { tour: where },
-        _min: { priceFrom: true },
-        _max: { priceFrom: true },
-      }),
-      this.prisma.tour.aggregate({
-        where,
-        _min: { durationDays: true },
-        _max: { durationDays: true },
+        _min: { priceFrom: true, durationDays: true },
+        _max: { priceFrom: true, durationDays: true },
       }),
     ]);
 
@@ -570,14 +602,21 @@ export class ToursService {
       formats,
       features,
       price: {
-        min: priceAgg._min.priceFrom ?? 0,
-        max: priceAgg._max.priceFrom ?? 0,
+        min: formatAgg._min.priceFrom ?? 0,
+        max: formatAgg._max.priceFrom ?? 0,
       },
       duration: {
-        min: durationAgg._min.durationDays ?? 1,
-        max: durationAgg._max.durationDays ?? 1,
+        min: formatAgg._min.durationDays ?? 1,
+        max: formatAgg._max.durationDays ?? 1,
       },
     };
+  }
+
+  /** У «С туром чаще выбирают» те же карточки, что в каталоге, — со сводкой формата. */
+  private withRelatedSummary<
+    T extends { relatedTours: { priceOptions: FormatSummarySource[] }[] },
+  >(tour: T) {
+    return { ...tour, relatedTours: tour.relatedTours.map(withFormatSummary) };
   }
 
   private async slugExists(slug: string, exceptId?: string): Promise<boolean> {
@@ -596,11 +635,7 @@ export class ToursService {
       description: dto.description,
       coverImage: dto.coverImage,
       gallery: dto.gallery,
-      durationDays: dto.durationDays,
-      groupSize: dto.groupSize,
-      difficulty: dto.difficulty,
       season: dto.season,
-      nearestDate: dto.nearestDate ? new Date(dto.nearestDate) : undefined,
       badges: dto.badges,
       aboutText: dto.aboutText,
       earlyBooking: dto.earlyBooking,
@@ -626,13 +661,16 @@ export class ToursService {
     const optionIds: string[] = [];
 
     if (dto.priceOptions !== undefined) {
-      for (const option of dto.priceOptions) {
+      for (const [order, option] of dto.priceOptions.entries()) {
         const created = await tx.tourPriceOption.create({
           data: {
             tourId,
+            order,
             formatName: option.formatName,
             priceFrom: option.priceFrom,
-            maxGroupSize: option.maxGroupSize,
+            durationDays: option.durationDays,
+            groupSize: option.groupSize,
+            difficulty: option.difficulty,
           },
           select: { id: true },
         });
