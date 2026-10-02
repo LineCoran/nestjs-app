@@ -203,6 +203,16 @@ export class CreateTourDto {
   @IsString()
   earlyBooking?: string;
 
+  /**
+   * Белый бейдж на карточке тура: «Лето», «с 2027 года». Пусто — на карточке
+   * сезон. Отдельно от season: по сезону работает фильтр каталога.
+   * null — очистить.
+   */
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  seasonLabel?: string | null;
+
   /** Короткий вариант карточки — без цены. */
   @IsOptional()
   @IsBoolean()

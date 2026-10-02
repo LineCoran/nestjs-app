@@ -83,6 +83,7 @@ model Tour {
   aboutText String? // расширенное описание «О туре» (rich text / HTML)
 
   earlyBooking String? // тег раннего бронирования на карточке, например «открыто бронирование на 2027»
+  seasonLabel  String? // белый бейдж на карточке: «Лето», «с 2027 года»; пусто — показывается сезон
   hidePrice    Boolean @default(false) // прятать цену в карточке (короткий вариант карточки)
 
   category   TourCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)

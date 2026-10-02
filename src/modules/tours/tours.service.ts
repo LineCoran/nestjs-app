@@ -48,6 +48,7 @@ const TOUR_DETAIL_INCLUDE = {
       coverImage: true,
       badges: true,
       season: true,
+      seasonLabel: true,
       earlyBooking: true,
       hidePrice: true,
       // Цена нужна карточке «с туром чаще выбирают» — как в макете.
@@ -69,6 +70,7 @@ const TOUR_CARD_SELECT = {
   coverImage: true,
   badges: true,
   season: true,
+  seasonLabel: true,
   earlyBooking: true,
   hidePrice: true,
   isPublished: true,
@@ -485,6 +487,7 @@ export class ToursService {
       groupSize: summary.groupSize,
       difficulty: summary.difficulty,
       season: tour.season,
+      seasonLabel: tour.seasonLabel,
       earlyBooking: tour.earlyBooking,
       hidePrice: tour.hidePrice,
       category: tour.category,
@@ -642,6 +645,7 @@ export class ToursService {
           ? (dto.highlights as unknown as Prisma.InputJsonValue)
           : undefined,
       aboutText: dto.aboutText,
+      seasonLabel: dto.seasonLabel,
       earlyBooking: dto.earlyBooking,
       hidePrice: dto.hidePrice,
       category: dto.categoryId
