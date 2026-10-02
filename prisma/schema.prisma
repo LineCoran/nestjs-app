@@ -374,7 +374,15 @@ model BlogPost {
   title      String
   excerpt    String?
   coverImage String?
+  // Подпись под обложкой в статье («Фото: экспедиция…»); пусто — без подписи.
+  coverCaption String?
+  // Вводный абзац под заголовком статьи (на карточке — excerpt).
+  lead       String?
+  // Устаревший HTML-текст статьи. Новые статьи пишутся блоками (blocks);
+  // миграция перенесла старый текст в один блок text.
   content    String? // rich text / markdown
+  // Тело статьи — массив блоков { id, type, ... } (см. blog/blog-blocks.ts).
+  blocks     Json    @default("[]")
 
   categoryId String?
   category   BlogCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)

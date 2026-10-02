@@ -6,5 +6,7 @@ import { ToursAdminController } from './tours.admin.controller';
 @Module({
   controllers: [ToursPublicController, ToursAdminController],
   providers: [ToursService],
+  // Блог подтягивает карточки туров для блока «Туры» в статье.
+  exports: [ToursService],
 })
 export class ToursModule {}

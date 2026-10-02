@@ -5,6 +5,14 @@ import {
   PaginationDto,
 } from '../../common/dto/pagination.dto';
 import { ensureUniqueSlug, generateSlug } from '../../common/utils/slug.util';
+import { Prisma } from '../../generated/prisma/client';
+import { ToursService } from '../tours/tours.service';
+import {
+  blocksPlainText,
+  collectTourIds,
+  readBlocks,
+  sanitizeBlocks,
+} from './blog-blocks';
 import {
   BlogListQueryDto,
   CreateBlogPostDto,
@@ -20,6 +28,7 @@ const LIST_SELECT = {
   excerpt: true,
   coverImage: true,
   content: true,
+  blocks: true,
   publishedAt: true,
   isPublished: true,
   category: { select: CATEGORY_SELECT },
@@ -29,21 +38,37 @@ const LIST_SELECT = {
 const WORDS_PER_MINUTE = 180;
 
 /** Примерное время чтения в минутах по объёму текста (без HTML), минимум 1. */
-function readingMinutes(content?: string | null): number {
-  if (!content) return 1;
-  const plain = content.replace(/<[^>]+>/g, ' ');
+function readingMinutes(text: string): number {
+  const plain = text.replace(/<[^>]+>/g, ' ');
   const words = plain.split(/\s+/).filter(Boolean).length;
   return Math.max(1, Math.round(words / WORDS_PER_MINUTE));
 }
 
-/** Добавляет вычисляемое поле readingMinutes к посту (по его content). */
-function withReadingTime<T extends { content?: string | null }>(post: T) {
-  return { ...post, readingMinutes: readingMinutes(post.content) };
+/**
+ * Добавляет вычисляемое поле readingMinutes — по блокам, а у старых статей без
+ * блоков по content.
+ */
+function withReadingTime<
+  T extends { content?: string | null; blocks?: Prisma.JsonValue },
+>(post: T) {
+  const blocks = readBlocks(post.blocks);
+  const text = blocks.length ? blocksPlainText(blocks) : (post.content ?? '');
+  return { ...post, readingMinutes: readingMinutes(text) };
+}
+
+/** В списках блоки не нужны — по ним только посчитано время чтения. */
+function toListItem<
+  T extends { content?: string | null; blocks?: Prisma.JsonValue },
+>(post: T) {
+  return { ...withReadingTime(post), blocks: undefined };
 }
 
 @Injectable()
 export class BlogService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tours: ToursService,
+  ) {}
 
   async findPublished(query: BlogListQueryDto) {
     const where = {
@@ -61,7 +86,7 @@ export class BlogService {
       this.prisma.blogPost.count({ where }),
     ]);
     return buildPaginatedResult(
-      items.map(withReadingTime),
+      items.map(toListItem),
       total,
       query.page,
       query.limit,
@@ -91,7 +116,12 @@ export class BlogService {
       include: { category: { select: CATEGORY_SELECT } },
     });
     if (!post) throw new NotFoundException(`Статья «${slug}» не найдена`);
-    return withReadingTime(post);
+    // Карточки для блоков «Туры»: снятые с публикации туры просто не покажутся.
+    const tours = await this.tours.findCardsByIds(
+      collectTourIds(readBlocks(post.blocks)),
+      { publishedOnly: true },
+    );
+    return { ...withReadingTime(post), tours };
   }
 
   async findAllForAdmin(query: PaginationDto) {
@@ -105,7 +135,7 @@ export class BlogService {
       this.prisma.blogPost.count(),
     ]);
     return buildPaginatedResult(
-      items.map(withReadingTime),
+      items.map(toListItem),
       total,
       query.page,
       query.limit,
@@ -132,7 +162,10 @@ export class BlogService {
         title: dto.title,
         excerpt: dto.excerpt,
         coverImage: dto.coverImage,
+        coverCaption: dto.coverCaption,
+        lead: dto.lead,
         content: dto.content,
+        blocks: dto.blocks ? sanitizeBlocks(dto.blocks) : undefined,
         categoryId: categoryId ?? undefined,
         isPublished: dto.isPublished ?? false,
         publishedAt: this.resolvePublishedAt(dto, null),
@@ -163,7 +196,10 @@ export class BlogService {
         title: dto.title,
         excerpt: dto.excerpt,
         coverImage: dto.coverImage,
+        coverCaption: dto.coverCaption,
+        lead: dto.lead,
         content: dto.content,
+        blocks: dto.blocks ? sanitizeBlocks(dto.blocks) : undefined,
         ...(categoryId === undefined ? {} : { categoryId }),
         isPublished: dto.isPublished,
         publishedAt: this.resolvePublishedAt(dto, existing.publishedAt),

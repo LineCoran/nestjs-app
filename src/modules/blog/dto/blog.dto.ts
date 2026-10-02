@@ -1,5 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
 import {
+  IsArray,
   IsBoolean,
   IsIn,
   IsISO8601,
@@ -26,9 +27,28 @@ export class CreateBlogPostDto {
   @IsString()
   coverImage?: string;
 
+  /** Вводный абзац под заголовком статьи. */
+  @IsOptional()
+  @IsString()
+  lead?: string;
+
+  /** Подпись под обложкой в статье. */
+  @IsOptional()
+  @IsString()
+  coverCaption?: string;
+
+  /** Устаревший HTML-текст; новые статьи пишутся блоками. */
   @IsOptional()
   @IsString()
   content?: string;
+
+  /**
+   * Тело статьи — блоки { id, type, ... }. Форму каждого блока проверяет
+   * `sanitizeBlocks` (blog-blocks.ts): у блоков разные поля, декораторами их не описать.
+   */
+  @IsOptional()
+  @IsArray()
+  blocks?: unknown[];
 
   /** Название категории/типа статьи. Категория создаётся, если её ещё нет; пустая строка — открепить. */
   @IsOptional()

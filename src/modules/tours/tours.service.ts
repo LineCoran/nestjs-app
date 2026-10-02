@@ -615,6 +615,23 @@ export class ToursService {
     };
   }
 
+  /**
+   * Карточки туров по id в заданном порядке (блок «Туры» в статье блога).
+   * Неопубликованные на сайт не попадают; админка видит все — для предпросмотра.
+   */
+  async findCardsByIds(ids: string[], options: { publishedOnly: boolean }) {
+    if (!ids.length) return [];
+    const tours = await this.prisma.tour.findMany({
+      where: {
+        id: { in: ids },
+        ...(options.publishedOnly ? { isPublished: true } : {}),
+      },
+      select: TOUR_CARD_SELECT,
+    });
+    const byId = new Map(tours.map((t) => [t.id, withFormatSummary(t)]));
+    return ids.flatMap((id) => byId.get(id) ?? []);
+  }
+
   /** У «С туром чаще выбирают» те же карточки, что в каталоге, — со сводкой формата. */
   private withRelatedSummary<
     T extends { relatedTours: { priceOptions: FormatSummarySource[] }[] },
