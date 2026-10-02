@@ -4,6 +4,7 @@ import {
   IsBoolean,
   IsIn,
   IsISO8601,
+  IsObject,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -49,6 +50,16 @@ export class CreateBlogPostDto {
   @IsOptional()
   @IsArray()
   blocks?: unknown[];
+
+  /** Боковая панель: содержание, тексты автора, туры, кнопка (форму проверяет `sanitizeSidebar`). */
+  @IsOptional()
+  @IsObject()
+  sidebar?: Record<string, unknown>;
+
+  /** Гид-автор статьи; пустая строка — без автора. */
+  @IsOptional()
+  @IsString()
+  authorId?: string;
 
   /** Название категории/типа статьи. Категория создаётся, если её ещё нет; пустая строка — открепить. */
   @IsOptional()

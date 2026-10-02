@@ -161,3 +161,46 @@ export function blocksPlainText(blocks: BlogBlock[]): string {
     })
     .join(' ');
 }
+
+/**
+ * Боковая панель справа от статьи. Содержание собирается на фронте из
+ * подзаголовков; здесь — что показывать и чем заполнить остальное.
+ * Тексты автора пустые — берутся имя и описание гида.
+ */
+// type, а не interface: Prisma принимает в Json только типы с неявной индексной сигнатурой.
+export type BlogSidebar = {
+  showToc: boolean;
+  authorLabel: string;
+  authorText: string;
+  toursTitle: string;
+  tourIds: string[];
+  buttonLabel: string;
+  buttonHref: string;
+};
+
+const MAX_SIDEBAR_TOURS = 6;
+
+export function sanitizeSidebar(raw: unknown): BlogSidebar {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new BadRequestException('sidebar: ожидается объект');
+  }
+  const s = raw as Record<string, unknown>;
+  return {
+    showToc: s.showToc !== false,
+    authorLabel: str(s.authorLabel),
+    authorText: str(s.authorText),
+    toursTitle: str(s.toursTitle),
+    tourIds: [...new Set(strList(s.tourIds, MAX_SIDEBAR_TOURS))],
+    buttonLabel: str(s.buttonLabel),
+    buttonHref: str(s.buttonHref),
+  };
+}
+
+/** Панель из БД (Json); старые статьи — пустой объект. */
+export function readSidebarTourIds(value: unknown): string[] {
+  if (!value || typeof value !== 'object') return [];
+  const ids = (value as { tourIds?: unknown }).tourIds;
+  return Array.isArray(ids)
+    ? ids.filter((id): id is string => typeof id === 'string')
+    : [];
+}

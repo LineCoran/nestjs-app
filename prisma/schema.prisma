@@ -384,6 +384,12 @@ model BlogPost {
   // Тело статьи — массив блоков { id, type, ... } (см. blog/blog-blocks.ts).
   blocks     Json    @default("[]")
 
+  // Боковая панель справа от статьи: содержание, туры, кнопка (см. sanitizeSidebar).
+  sidebar Json @default("{}")
+  // «Автор статьи» в боковой панели — гид из «Команды». Удалили гида — блок пропадает.
+  authorId String?
+  author   Guide?  @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
   categoryId String?
   category   BlogCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
@@ -395,6 +401,7 @@ model BlogPost {
 
   @@index([isPublished])
   @@index([categoryId])
+  @@index([authorId])
   @@map("blog_posts")
 }
 
@@ -429,6 +436,9 @@ model Guide {
 
   // Теги гида для страницы «О нас»: [{ label, icon }], icon — kebab-case имя из lucide
   tags Json @default("[]")
+
+  // Статьи блога, где гид указан автором.
+  blogPosts BlogPost[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

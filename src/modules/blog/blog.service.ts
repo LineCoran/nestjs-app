@@ -11,7 +11,9 @@ import {
   blocksPlainText,
   collectTourIds,
   readBlocks,
+  readSidebarTourIds,
   sanitizeBlocks,
+  sanitizeSidebar,
 } from './blog-blocks';
 import {
   BlogListQueryDto,
@@ -20,6 +22,15 @@ import {
 } from './dto/blog.dto';
 
 const CATEGORY_SELECT = { slug: true, name: true };
+
+/** Автор статьи в боковой панели — карточка гида. */
+const AUTHOR_SELECT = {
+  id: true,
+  name: true,
+  role: true,
+  photo: true,
+  description: true,
+};
 
 const LIST_SELECT = {
   id: true,
@@ -113,14 +124,22 @@ export class BlogService {
   async findBySlug(slug: string) {
     const post = await this.prisma.blogPost.findFirst({
       where: { slug, isPublished: true },
-      include: { category: { select: CATEGORY_SELECT } },
+      include: {
+        category: { select: CATEGORY_SELECT },
+        author: { select: AUTHOR_SELECT },
+      },
     });
     if (!post) throw new NotFoundException(`Статья «${slug}» не найдена`);
-    // Карточки для блоков «Туры»: снятые с публикации туры просто не покажутся.
-    const tours = await this.tours.findCardsByIds(
-      collectTourIds(readBlocks(post.blocks)),
-      { publishedOnly: true },
-    );
+    // Карточки для блоков «Туры» и боковой панели: снятые с публикации туры просто не покажутся.
+    const tourIds = [
+      ...new Set([
+        ...collectTourIds(readBlocks(post.blocks)),
+        ...readSidebarTourIds(post.sidebar),
+      ]),
+    ];
+    const tours = await this.tours.findCardsByIds(tourIds, {
+      publishedOnly: true,
+    });
     return { ...withReadingTime(post), tours };
   }
 
@@ -166,6 +185,8 @@ export class BlogService {
         lead: dto.lead,
         content: dto.content,
         blocks: dto.blocks ? sanitizeBlocks(dto.blocks) : undefined,
+        sidebar: dto.sidebar ? sanitizeSidebar(dto.sidebar) : undefined,
+        authorId: dto.authorId || undefined,
         categoryId: categoryId ?? undefined,
         isPublished: dto.isPublished ?? false,
         publishedAt: this.resolvePublishedAt(dto, null),
@@ -200,6 +221,9 @@ export class BlogService {
         lead: dto.lead,
         content: dto.content,
         blocks: dto.blocks ? sanitizeBlocks(dto.blocks) : undefined,
+        sidebar: dto.sidebar ? sanitizeSidebar(dto.sidebar) : undefined,
+        // Пустая строка — открепить автора, undefined — не трогать.
+        authorId: dto.authorId === undefined ? undefined : dto.authorId || null,
         ...(categoryId === undefined ? {} : { categoryId }),
         isPublished: dto.isPublished,
         publishedAt: this.resolvePublishedAt(dto, existing.publishedAt),
