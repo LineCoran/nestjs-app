@@ -637,6 +637,10 @@ export class ToursService {
       gallery: dto.gallery,
       season: dto.season,
       badges: dto.badges,
+      highlights:
+        dto.highlights !== undefined
+          ? (dto.highlights as unknown as Prisma.InputJsonValue)
+          : undefined,
       aboutText: dto.aboutText,
       earlyBooking: dto.earlyBooking,
       hidePrice: dto.hidePrice,

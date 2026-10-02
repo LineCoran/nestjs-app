@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   IsArray,
   IsBoolean,
   IsEnum,
@@ -8,6 +9,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -100,6 +102,38 @@ export class ImportantInfoItemDto {
   type: ImportantInfoType;
 }
 
+/** Лимиты пункта плашки характеристик — длиннее не помещается в плитку макета. */
+export const TOUR_HIGHLIGHT_LIMITS = {
+  items: 5,
+  title: 18,
+  value: 12,
+  label: 22,
+} as const;
+
+/** Пункт плашки характеристик под заголовком тура: «Группа / 8-12 чел. / или индив.». */
+export class TourHighlightDto {
+  /** Имя lucide-иконки (kebab-case) из каталога иконок. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  icon?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(TOUR_HIGHLIGHT_LIMITS.title)
+  title: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(TOUR_HIGHLIGHT_LIMITS.value)
+  value: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(TOUR_HIGHLIGHT_LIMITS.label)
+  label?: string;
+}
+
 /** Привязка фичи из справочника к туру с типом «входит/не входит». */
 export class TourFeatureLinkDto {
   @IsString()
@@ -151,6 +185,14 @@ export class CreateTourDto {
   @IsArray()
   @IsString({ each: true })
   badges?: string[];
+
+  /** Плашка характеристик под заголовком; пустой массив — собрать из формата. */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(TOUR_HIGHLIGHT_LIMITS.items)
+  @ValidateNested({ each: true })
+  @Type(() => TourHighlightDto)
+  highlights?: TourHighlightDto[];
 
   @IsOptional()
   @IsString()
