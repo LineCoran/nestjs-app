@@ -1,7 +1,11 @@
-import { mkdir, writeFile } from 'fs/promises';
+import { mkdir, readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { Injectable, Logger } from '@nestjs/common';
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 
 export interface StoredFile {
   url: string;
@@ -54,6 +58,30 @@ export class StorageService {
     }
   }
 
+  /**
+   * Префикс публичных ссылок на загруженные файлы: по нему эндпоинт копий
+   * проверяет, что ссылка ведёт в наше хранилище, и достаёт имя файла.
+   */
+  get publicPrefix(): string {
+    if (!this.s3) return `/${this.dir}/`;
+    const base = this.publicUrl || `${process.env.S3_ENDPOINT}/${this.bucket}`;
+    return `${base}/${this.dir}/`;
+  }
+
+  /** Содержимое ранее загруженного файла (для пересборки копий фото). */
+  async read(filename: string): Promise<Buffer> {
+    if (this.s3) {
+      const res = await this.s3.send(
+        new GetObjectCommand({
+          Bucket: this.bucket,
+          Key: `${this.dir}/${filename}`,
+        }),
+      );
+      return Buffer.from(await res.Body!.transformToByteArray());
+    }
+    return readFile(join(process.cwd(), this.dir, filename));
+  }
+
   async save(
     filename: string,
     buffer: Buffer,
@@ -68,6 +96,9 @@ export class StorageService {
           Key: `${this.dir}/${filename}`,
           Body: buffer,
           ContentType: mimeType,
+          // Имена файлов — UUID и никогда не переписываются другим содержимым,
+          // поэтому браузер может кэшировать их навсегда.
+          CacheControl: 'public, max-age=31536000, immutable',
           ...(this.acl ? { ACL: this.acl as never } : {}),
         }),
       );
