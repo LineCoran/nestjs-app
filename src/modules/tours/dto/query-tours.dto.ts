@@ -6,10 +6,11 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  Max,
   Min,
 } from 'class-validator';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
-import { Difficulty } from '../../../generated/prisma/enums';
+import { Difficulty, Transport } from '../../../generated/prisma/enums';
 
 /** Нормализует query-параметр в массив строк (поддержка `?x=a&x=b` и `?x=a,b`). */
 const toStringArray = ({ value }: { value: unknown }): string[] | undefined => {
@@ -17,6 +18,10 @@ const toStringArray = ({ value }: { value: unknown }): string[] | undefined => {
   const arr = Array.isArray(value) ? value : String(value).split(',');
   return arr.map((v) => String(v).trim()).filter(Boolean);
 };
+
+/** То же для чисел: `?months=6&months=7` или `?months=6,7` → [6, 7]. */
+const toNumberArray = (params: { value: unknown }): number[] | undefined =>
+  toStringArray(params)?.map(Number);
 
 export const SORT_OPTIONS = ['popular', 'new', 'old'] as const;
 export type ToursSort = (typeof SORT_OPTIONS)[number];
@@ -55,6 +60,26 @@ export class QueryToursDto extends PaginationDto {
   @Transform(toStringArray)
   @IsString({ each: true })
   features?: string[];
+
+  /** «Когда»: месяцы 1–12, тур подходит, если его сезон задевает хотя бы один. */
+  @IsOptional()
+  @Transform(toNumberArray)
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  @Max(12, { each: true })
+  months?: number[];
+
+  /** Транспорт формата (можно несколько). */
+  @IsOptional()
+  @Transform(toStringArray)
+  @IsEnum(Transport, { each: true })
+  transports?: Transport[];
+
+  /** Группы «Входит в стоимость» — категории справочника TourFeature (все должны входить). */
+  @IsOptional()
+  @Transform(toStringArray)
+  @IsString({ each: true })
+  included?: string[];
 
   /** Диапазон длительности тура в днях. */
   @IsOptional()

@@ -18,6 +18,7 @@ import {
   Difficulty,
   ImportantInfoType,
   InclusionType,
+  Transport,
 } from '../../../generated/prisma/enums';
 
 export class TourProgramItemDto {
@@ -83,6 +84,11 @@ export class TourPriceOptionDto {
 
   @IsEnum(Difficulty)
   difficulty: Difficulty;
+
+  /** Транспорт формата — для фильтра «Транспорт» в каталоге; не передан — не указан. */
+  @IsOptional()
+  @IsEnum(Transport)
+  transport?: Transport | null;
 }
 
 export class ImportantInfoItemDto {

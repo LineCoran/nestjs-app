@@ -5,11 +5,13 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
+import { InclusionType, Transport } from '../../generated/prisma/enums';
 import {
   buildPaginatedResult,
   PaginatedResult,
 } from '../../common/dto/pagination.dto';
 import { ensureUniqueSlug } from '../../common/utils/slug.util';
+import { parseSeasonMonths } from '../../common/utils/season-months.util';
 import { CreateTourDto } from './dto/create-tour.dto';
 import { UpdateTourDto } from './dto/update-tour.dto';
 import { QueryToursDto } from './dto/query-tours.dto';
@@ -19,6 +21,30 @@ import {
   parseSearchQuery,
   tokenVariants,
 } from '../../common/utils/search.util';
+
+/** Порядок транспорта в фильтре каталога. */
+const TRANSPORT_ORDER: Transport[] = [
+  Transport.JEEP,
+  Transport.SHIFT_BUS,
+  Transport.SNOWMOBILE,
+  Transport.HELICOPTER,
+  Transport.BOAT,
+  Transport.CAR,
+];
+
+/** Порядок групп «Входит в стоимость» в фильтре; остальные — по алфавиту в конце. */
+const FEATURE_GROUP_ORDER = [
+  'Проживание',
+  'Питание',
+  'Трансфер',
+  'Гид',
+  'Снаряжение',
+  'Страховка',
+];
+function featureGroupRank(category: string) {
+  const i = FEATURE_GROUP_ORDER.indexOf(category);
+  return i === -1 ? FEATURE_GROUP_ORDER.length : i;
+}
 
 /** Поля формата, из которых собирается сводка для карточки (см. withFormatSummary). */
 const FORMAT_SUMMARY_SELECT = {
@@ -545,6 +571,9 @@ export class ToursService {
     // (Раньше формат и цена писались в один ключ priceOptions и цена затирала формат.)
     const optionFilter: Prisma.TourPriceOptionWhereInput = {
       ...(query.formats?.length ? { formatName: { in: query.formats } } : {}),
+      ...(query.transports?.length
+        ? { transport: { in: query.transports } }
+        : {}),
       ...(query.difficulty?.length
         ? { difficulty: { in: query.difficulty } }
         : {}),
@@ -563,6 +592,24 @@ export class ToursService {
       ...(query.features?.length
         ? { features: { some: { featureId: { in: query.features } } } }
         : {}),
+      // «Когда»: месяцы сезона тура пересекаются с выбранными.
+      ...(query.months?.length
+        ? { seasonMonths: { hasSome: query.months } }
+        : {}),
+      // «Входит в стоимость»: каждая выбранная группа справочника (категория
+      // TourFeature) должна быть среди включённых пунктов тура.
+      ...(query.included?.length
+        ? {
+            AND: query.included.map((category) => ({
+              features: {
+                some: {
+                  inclusion: InclusionType.INCLUDED,
+                  feature: { category },
+                },
+              },
+            })),
+          }
+        : {}),
       ...(Object.keys(optionFilter).length
         ? { priceOptions: { some: optionFilter } }
         : {}),
@@ -578,7 +625,8 @@ export class ToursService {
         where,
         select: {
           season: true,
-          priceOptions: { select: { formatName: true } },
+          seasonMonths: true,
+          priceOptions: { select: { formatName: true, transport: true } },
         },
       }),
       this.prisma.tourFeature.findMany({
@@ -600,10 +648,36 @@ export class ToursService {
       ...new Set(tours.flatMap((t) => t.priceOptions.map((p) => p.formatName))),
     ].sort();
 
+    const months = [...new Set(tours.flatMap((t) => t.seasonMonths))].sort(
+      (a, b) => a - b,
+    );
+    const transports = TRANSPORT_ORDER.filter((tr) =>
+      tours.some((t) => t.priceOptions.some((p) => p.transport === tr)),
+    );
+    // Группы «Входит в стоимость» — категории справочника у включённых пунктов.
+    // Пункт без категории в фильтр не попадает.
+    const includedRaw = await this.prisma.tourFeature.findMany({
+      where: {
+        category: { not: null },
+        links: { some: { inclusion: InclusionType.INCLUDED, tour: where } },
+      },
+      select: { category: true },
+      distinct: ['category'],
+    });
+    const included = includedRaw
+      .map((f) => f.category as string)
+      .sort(
+        (a, b) =>
+          featureGroupRank(a) - featureGroupRank(b) || a.localeCompare(b, 'ru'),
+      );
+
     return {
       seasons,
       formats,
       features,
+      months,
+      transports,
+      included,
       price: {
         min: formatAgg._min.priceFrom ?? 0,
         max: formatAgg._max.priceFrom ?? 0,
@@ -656,6 +730,9 @@ export class ToursService {
       coverImage: dto.coverImage,
       gallery: dto.gallery,
       season: dto.season,
+      // Месяцы для фильтра «Когда» — всегда из текста сезона, руками не задаются.
+      seasonMonths:
+        dto.season !== undefined ? parseSeasonMonths(dto.season) : undefined,
       badges: dto.badges,
       highlights:
         dto.highlights !== undefined
@@ -696,6 +773,7 @@ export class ToursService {
             durationDays: option.durationDays,
             groupSize: option.groupSize,
             difficulty: option.difficulty,
+            transport: option.transport ?? null,
           },
           select: { id: true },
         });

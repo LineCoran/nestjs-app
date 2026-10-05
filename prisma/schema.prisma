@@ -21,6 +21,17 @@ enum Difficulty {
   HARD // сложная
 }
 
+// Транспорт формата тура — по нему фильтр «Транспорт» в каталоге
+// (название формата остаётся свободным текстом: «на Джипах (после 20 июня)»).
+enum Transport {
+  JEEP // джип
+  SHIFT_BUS // вахтовый автобус
+  SNOWMOBILE // снегоход
+  HELICOPTER // вертолёт
+  BOAT // яхта / катер
+  CAR // автомобиль
+}
+
 enum DateAvailability {
   AVAILABLE // 3+ места
   LIMITED // 1-2 места
@@ -73,6 +84,9 @@ model Tour {
   // Длительность, размер группы и сложность — у каждого формата свои (TourPriceOption),
   // ближайшая дата считается из заездов (TourSession). На туре их больше нет.
   season String? // сезон проведения, например «июн-сен»
+  // Месяцы сезона (1–12), разобранные из season при сохранении — по ним фильтр
+  // «Когда» в каталоге. Сам season — свободный текст для карточки.
+  seasonMonths Int[] @default([])
 
   // Плашка характеристик под заголовком страницы тура (до 5 пунктов
   // { icon?, title, value, label? }) — заполняется в админке вручную, от
@@ -184,6 +198,7 @@ model TourPriceOption {
   durationDays Int        @default(1) // продолжительность в днях
   groupSize    String? // размер группы текстом: у джипа «до 4 чел.», у автобуса «до 20 чел.»
   difficulty   Difficulty @default(MEDIUM)
+  transport    Transport? // для фильтра «Транспорт»; null — не указан (сплав, восхождение пешком)
 
   tour   Tour   @relation(fields: [tourId], references: [id], onDelete: Cascade)
   tourId String
