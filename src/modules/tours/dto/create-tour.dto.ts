@@ -192,7 +192,7 @@ export class CreateTourDto {
   @IsString({ each: true })
   badges?: string[];
 
-  /** Плашка характеристик под заголовком; пустой массив — собрать из формата. */
+  /** Плашка характеристик под заголовком; пустой массив — блок не показывается. */
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(TOUR_HIGHLIGHT_LIMITS.items)
