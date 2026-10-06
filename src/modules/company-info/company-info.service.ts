@@ -28,6 +28,7 @@ export class CompanyInfoService {
         heroTitle: dto.heroTitle,
         heroSubtitle: dto.heroSubtitle,
         heroImage: dto.heroImage,
+        catalogImage: dto.catalogImage,
         contactPhone: dto.contactPhone,
         telegramLink: dto.telegramLink,
         vkLink: dto.vkLink,

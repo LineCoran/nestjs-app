@@ -171,6 +171,11 @@ export class UpdateCompanyInfoDto {
   @IsString()
   heroImage?: string;
 
+  /** Обложка плашки «Все туры» в каталоге; пустая строка — запасная картинка. */
+  @IsOptional()
+  @IsString()
+  catalogImage?: string;
+
   @IsOptional()
   @IsString()
   contactPhone?: string;

@@ -478,6 +478,9 @@ model CompanyInfo {
   heroSubtitle String?
   heroImage    String?
 
+  // Обложка плашки «Все туры» в каталоге (у остальных плашек — image категории)
+  catalogImage String?
+
   // Контакты
   contactPhone String?
   telegramLink String?
