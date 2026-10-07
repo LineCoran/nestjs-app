@@ -7,6 +7,7 @@ import {
   IsIn,
   IsInt,
   IsNotEmpty,
+  IsObject,
   IsOptional,
   IsString,
   Max,
@@ -139,7 +140,28 @@ export class HomeBannersDto {
   gift?: HomeBannerDto;
 }
 
+export const CATALOG_DEFAULT_MODES = ['season', 'category', 'all'] as const;
+
+/** Категория каталога по умолчанию; months — категория на каждый месяц (null — «Все туры»). */
+export class CatalogDefaultDto {
+  @IsIn(CATALOG_DEFAULT_MODES)
+  mode: (typeof CATALOG_DEFAULT_MODES)[number];
+
+  @IsOptional()
+  @IsString()
+  categoryId?: string | null;
+
+  @IsOptional()
+  @IsObject()
+  months?: Record<string, string | null>;
+}
+
 export class UpdateCompanyInfoDto {
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CatalogDefaultDto)
+  catalogDefault?: CatalogDefaultDto;
+
   @IsOptional()
   @ValidateNested()
   @Type(() => HomeBannersDto)

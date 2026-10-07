@@ -1,7 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
-import { UpdateCompanyInfoDto } from './dto/company-info.dto';
+import {
+  CatalogDefaultDto,
+  UpdateCompanyInfoDto,
+} from './dto/company-info.dto';
+
+/** Оставляет только месяцы 1–12 со строковым id категории или null («Все туры»). */
+function sanitizeCatalogDefault(dto: CatalogDefaultDto) {
+  const months: Record<string, string | null> = {};
+  for (let m = 1; m <= 12; m++) {
+    const value = dto.months?.[String(m)];
+    months[m] = typeof value === 'string' && value ? value : null;
+  }
+  return {
+    mode: dto.mode,
+    categoryId: dto.categoryId || null,
+    months,
+  };
+}
 
 @Injectable()
 export class CompanyInfoService {
@@ -29,6 +46,10 @@ export class CompanyInfoService {
         heroSubtitle: dto.heroSubtitle,
         heroImage: dto.heroImage,
         catalogImage: dto.catalogImage,
+        catalogDefault:
+          dto.catalogDefault !== undefined
+            ? sanitizeCatalogDefault(dto.catalogDefault)
+            : undefined,
         contactPhone: dto.contactPhone,
         telegramLink: dto.telegramLink,
         vkLink: dto.vkLink,

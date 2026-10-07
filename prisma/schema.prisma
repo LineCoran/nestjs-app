@@ -522,6 +522,11 @@ model CompanyInfo {
   // Не заданные поля сайт берёт из стандартного дизайна.
   banners Json @default("{}")
 
+  // Какая категория открывается в каталоге (/tours) по умолчанию:
+  // { mode: 'season'|'category'|'all', categoryId?, months?: { "1".."12": categoryId|null } }.
+  // Пусто — «Все туры». Приводит к форме sanitizeCatalogDefault.
+  catalogDefault Json @default("{}")
+
   updatedAt DateTime @updatedAt
 
   @@map("company_info")
