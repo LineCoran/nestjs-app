@@ -212,6 +212,24 @@ export class CreateTourDto {
   @IsString()
   earlyBooking?: string | null;
 
+  /** Примечание «со звёздочкой» под «Что входит»; null — убрать. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  includedNote?: string | null;
+
+  /** Примечание «со звёздочкой» под «Что не входит»; null — убрать. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  excludedNote?: string | null;
+
+  /** Примечание «со звёздочкой» под «Что взять с собой»; null — убрать. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  whatToTakeNote?: string | null;
+
   /**
    * Белый бейдж на карточке тура: «Лето», «с 2027 года». Пусто — на карточке
    * сезон. Отдельно от season: по сезону работает фильтр каталога.

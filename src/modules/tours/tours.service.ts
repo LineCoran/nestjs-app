@@ -752,6 +752,9 @@ export class ToursService {
       aboutText: dto.aboutText,
       seasonLabel: dto.seasonLabel,
       earlyBooking: dto.earlyBooking,
+      includedNote: dto.includedNote,
+      excludedNote: dto.excludedNote,
+      whatToTakeNote: dto.whatToTakeNote,
       hidePrice: dto.hidePrice,
       isPublished: dto.isPublished,
     };
