@@ -49,6 +49,7 @@ function featureGroupRank(category: string) {
 /** Поля формата, из которых собирается сводка для карточки (см. withFormatSummary). */
 const FORMAT_SUMMARY_SELECT = {
   priceFrom: true,
+  priceIsFrom: true,
   durationDays: true,
   groupSize: true,
   difficulty: true,
@@ -517,13 +518,11 @@ export class ToursService {
       earlyBooking: tour.earlyBooking,
       hidePrice: tour.hidePrice,
       category: tour.category,
-      // Формат карточки: только минимальная цена, как в TOUR_CARD_SELECT.
+      // Формат карточки: только самый дешёвый формат, как в TOUR_CARD_SELECT.
       priceOptions: tour.priceOptions.length
         ? [
-            {
-              priceFrom: Math.min(...tour.priceOptions.map((p) => p.priceFrom)),
-            },
-          ]
+            tour.priceOptions.reduce((min, p) => (p.priceFrom < min.priceFrom ? p : min)),
+          ].map((p) => ({ priceFrom: p.priceFrom, priceIsFrom: p.priceIsFrom }))
         : [],
       matchedIn,
     };
@@ -770,6 +769,7 @@ export class ToursService {
             order,
             formatName: option.formatName,
             priceFrom: option.priceFrom,
+            priceIsFrom: option.priceIsFrom ?? true,
             durationDays: option.durationDays,
             groupSize: option.groupSize,
             difficulty: option.difficulty,
@@ -786,12 +786,12 @@ export class ToursService {
     const sessions = dto.sessions.map((session) => {
       const index = session.priceOptionIndex;
 
-      if (index !== undefined && dto.priceOptions === undefined) {
+      if (dto.priceOptions === undefined) {
         throw new BadRequestException(
           'priceOptionIndex ссылается на priceOptions того же запроса — передайте форматы вместе с заездами',
         );
       }
-      if (index !== undefined && index >= optionIds.length) {
+      if (index >= optionIds.length) {
         throw new BadRequestException(
           `Заезд ссылается на несуществующий формат (priceOptionIndex: ${index})`,
         );
@@ -802,8 +802,7 @@ export class ToursService {
         dateFrom: new Date(session.dateFrom),
         dateTo: new Date(session.dateTo),
         availability: session.availability,
-        // Без индекса заезд остаётся общим для всех форматов тура.
-        priceOptionId: index !== undefined ? optionIds[index] : null,
+        priceOptionId: optionIds[index],
       };
     });
 
@@ -814,8 +813,8 @@ export class ToursService {
    * Форматы и заезды пересоздаются вместе, поэтому и приходить должны вместе:
    * прислали одни форматы — каскад унесёт их даты; прислали одни заезды —
    * привязывать их будет не к чему (индекс формата ссылается на этот же
-   * запрос), и даты молча станут общими. У тура без привязанных заездов
-   * терять нечего — там частичное обновление по-прежнему разрешено.
+   * запрос). У тура без заездов терять нечего — там частичное обновление
+   * по-прежнему разрешено.
    */
   private async assertFormatsAndSessionsGoTogether(
     tourId: string,
@@ -826,7 +825,7 @@ export class ToursService {
     }
 
     const bound = await this.prisma.tourSession.count({
-      where: { tourId, priceOptionId: { not: null } },
+      where: { tourId },
     });
     if (bound) {
       throw new BadRequestException(

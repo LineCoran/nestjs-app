@@ -103,7 +103,7 @@ export class BookingsService {
 
   /**
    * Даты заездов принадлежат формату тура, поэтому заявка не может ссылаться на
-   * заезд чужого формата. Заезд без формата (общий для тура) подходит любому.
+   * заезд чужого формата.
    */
   private async assertSessionMatchesFormat(dto: CreateBookingDto) {
     if (!dto.sessionId || !dto.priceOptionId) return;
@@ -113,7 +113,7 @@ export class BookingsService {
       select: { priceOptionId: true },
     });
 
-    if (session?.priceOptionId && session.priceOptionId !== dto.priceOptionId) {
+    if (session && session.priceOptionId !== dto.priceOptionId) {
       throw new BadRequestException(
         'Выбранный заезд относится к другому формату тура',
       );

@@ -55,12 +55,10 @@ export class TourSessionDto {
    * Формат тура, к которому относится заезд, — индекс в массиве `priceOptions`
    * этого же запроса. Не id: форматы при сохранении пересоздаются, их id
    * появляются только после вставки, поэтому связь идёт по позиции.
-   * Не передан — заезд общий для всех форматов.
    */
-  @IsOptional()
   @IsInt()
   @Min(0)
-  priceOptionIndex?: number;
+  priceOptionIndex: number;
 }
 
 export class TourPriceOptionDto {
@@ -71,6 +69,11 @@ export class TourPriceOptionDto {
   @IsInt()
   @Min(0)
   priceFrom: number;
+
+  /** «от» перед ценой на сайте; false — цена точная. Не передан — «от». */
+  @IsOptional()
+  @IsBoolean()
+  priceIsFrom?: boolean;
 
   /** Продолжительность формата в днях. */
   @IsInt()

@@ -194,7 +194,8 @@ model TourPriceOption {
   id String @id @default(uuid())
 
   formatName   String // «Вахтовый автобус», «Джипы», «Вертолёт»
-  priceFrom    Int // цена «от» за человека
+  priceFrom    Int // цена за человека
+  priceIsFrom  Boolean    @default(true) // показывать «от» перед ценой; false — цена точная
   order        Int        @default(0) // порядок форматов, как в админке; первый — формат по умолчанию на странице тура
   durationDays Int        @default(1) // продолжительность в днях
   groupSize    String? // размер группы текстом: у джипа «до 4 чел.», у автобуса «до 20 чел.»
@@ -223,11 +224,10 @@ model TourSession {
   tourId String
 
   // Формат тура, к которому привязан заезд: у джипов и вертолёта свои даты.
-  // null — заезд общий для всех форматов (так лежат данные, заведённые до
-  // привязки, и так админка помечает «Все форматы»).
-  // Cascade: удалили формат — его даты уходят вместе с ним.
-  priceOption   TourPriceOption? @relation(fields: [priceOptionId], references: [id], onDelete: Cascade)
-  priceOptionId String?
+  // Общих «для всех форматов» заездов нет — миграция shared_sessions_to_formats
+  // разложила их по форматам. Cascade: удалили формат — его даты уходят с ним.
+  priceOption   TourPriceOption @relation(fields: [priceOptionId], references: [id], onDelete: Cascade)
+  priceOptionId String
 
   bookings Booking[]
 
