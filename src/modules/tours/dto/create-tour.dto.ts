@@ -168,7 +168,7 @@ export class CreateTourDto {
 
   @IsOptional()
   @IsString()
-  subtitle?: string;
+  subtitle?: string | null;
 
   @IsOptional()
   @IsString()
@@ -176,7 +176,7 @@ export class CreateTourDto {
 
   @IsOptional()
   @IsString()
-  coverImage?: string;
+  coverImage?: string | null;
 
   @IsOptional()
   @IsArray()
@@ -188,7 +188,7 @@ export class CreateTourDto {
 
   @IsOptional()
   @IsString()
-  season?: string;
+  season?: string | null;
 
   @IsOptional()
   @IsArray()
@@ -205,12 +205,12 @@ export class CreateTourDto {
 
   @IsOptional()
   @IsString()
-  aboutText?: string;
+  aboutText?: string | null;
 
   /** Тег раннего бронирования на карточке, например «открыто бронирование на 2027». */
   @IsOptional()
   @IsString()
-  earlyBooking?: string;
+  earlyBooking?: string | null;
 
   /**
    * Белый бейдж на карточке тура: «Лето», «с 2027 года». Пусто — на карточке
@@ -229,7 +229,7 @@ export class CreateTourDto {
 
   @IsOptional()
   @IsString()
-  categoryId?: string;
+  categoryId?: string | null;
 
   // ── Вложенные данные ──
   @IsOptional()

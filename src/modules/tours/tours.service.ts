@@ -292,6 +292,9 @@ export class ToursService {
       const tour = await tx.tour.create({
         data: {
           ...this.buildScalarData(dto),
+          category: dto.categoryId
+            ? { connect: { id: dto.categoryId } }
+            : undefined,
           slug,
           title: dto.title,
           ...this.buildNestedWrites(dto),
@@ -330,6 +333,12 @@ export class ToursService {
         where: { id },
         data: {
           ...this.buildScalarData(dto),
+          // null — категорию сняли в форме; undefined — поле не трогаем.
+          category: dto.categoryId
+            ? { connect: { id: dto.categoryId } }
+            : dto.categoryId === null
+              ? { disconnect: true }
+              : undefined,
           ...(slug ? { slug } : {}),
           ...this.buildNestedWrites(dto),
           ...(dto.relatedTourIds !== undefined
@@ -720,7 +729,10 @@ export class ToursService {
     return !!found && found.id !== exceptId;
   }
 
-  /** Скалярные поля тура (без вложенных связей). */
+  /**
+   * Скалярные поля тура (без вложенных связей). undefined — поле не трогаем,
+   * null — очищаем (админка шлёт null для стёртых полей).
+   */
   private buildScalarData(dto: CreateTourDto | UpdateTourDto) {
     return {
       title: dto.title,
@@ -741,9 +753,6 @@ export class ToursService {
       seasonLabel: dto.seasonLabel,
       earlyBooking: dto.earlyBooking,
       hidePrice: dto.hidePrice,
-      category: dto.categoryId
-        ? { connect: { id: dto.categoryId } }
-        : undefined,
       isPublished: dto.isPublished,
     };
   }

@@ -16,7 +16,7 @@ export class CreateTourFeatureDto {
 
   @IsOptional()
   @IsString()
-  category?: string;
+  category?: string | null;
 }
 
 export class UpdateTourFeatureDto extends PartialType(CreateTourFeatureDto) {}

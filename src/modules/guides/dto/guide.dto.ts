@@ -27,21 +27,21 @@ export class CreateGuideDto {
 
   @IsOptional()
   @IsString()
-  role?: string;
+  role?: string | null;
 
   @IsOptional()
   @IsString()
-  photo?: string;
+  photo?: string | null;
 
   /** Короткое описание — карточка на главной и в «Команде». */
   @IsOptional()
   @IsString()
-  description?: string;
+  description?: string | null;
 
   /** Развёрнутое описание — страница «О нас». */
   @IsOptional()
   @IsString()
-  fullDescription?: string;
+  fullDescription?: string | null;
 
   @IsOptional()
   @IsArray()
