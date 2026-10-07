@@ -179,6 +179,7 @@ model SiteIcon {
 model ProgramTag {
   id   String @id @default(uuid())
   name String @unique
+  icon String? // kebab-case имя lucide-иконки из каталога (SiteIcon) — перед названием тега на сайте
 
   programItems TourProgramItem[] @relation("ProgramItemTags")
 
@@ -306,6 +307,7 @@ model WhatToTakeCategory {
 model WhatToTakeItem {
   id   String @id @default(uuid())
   name String
+  icon String? // kebab-case имя lucide-иконки из каталога (SiteIcon) — перед названием пункта на сайте
 
   category   WhatToTakeCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   categoryId String

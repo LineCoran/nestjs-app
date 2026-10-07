@@ -4,13 +4,19 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PartialType } from '@nestjs/mapped-types';
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 import { PrismaService } from '../../prisma/prisma.service';
 
 export class CreateProgramTagDto {
   @IsString()
   @IsNotEmpty()
   name: string;
+
+  /** Имя lucide-иконки (kebab-case) из каталога иконок; пустая строка — без иконки. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  icon?: string;
 }
 
 export class UpdateProgramTagDto extends PartialType(CreateProgramTagDto) {}
