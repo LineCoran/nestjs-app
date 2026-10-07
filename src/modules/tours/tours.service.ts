@@ -78,6 +78,7 @@ const TOUR_DETAIL_INCLUDE = {
       seasonLabel: true,
       earlyBooking: true,
       hidePrice: true,
+      isNew: true,
       // Цена нужна карточке «с туром чаще выбирают» — как в макете.
       priceOptions: {
         select: FORMAT_SUMMARY_SELECT,
@@ -100,6 +101,7 @@ const TOUR_CARD_SELECT = {
   seasonLabel: true,
   earlyBooking: true,
   hidePrice: true,
+  isNew: true,
   isPublished: true,
   category: { select: { id: true, name: true, slug: true } },
   // Самый дешёвый формат: его цена «от» и его параметры попадают в карточку.
@@ -526,6 +528,7 @@ export class ToursService {
       seasonLabel: tour.seasonLabel,
       earlyBooking: tour.earlyBooking,
       hidePrice: tour.hidePrice,
+      isNew: tour.isNew,
       category: tour.category,
       // Формат карточки: только самый дешёвый формат, как в TOUR_CARD_SELECT.
       priceOptions: tour.priceOptions.length
@@ -756,6 +759,7 @@ export class ToursService {
       excludedNote: dto.excludedNote,
       whatToTakeNote: dto.whatToTakeNote,
       hidePrice: dto.hidePrice,
+      isNew: dto.isNew,
       isPublished: dto.isPublished,
     };
   }

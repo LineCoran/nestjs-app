@@ -245,6 +245,11 @@ export class CreateTourDto {
   @IsBoolean()
   hidePrice?: boolean;
 
+  /** Метка «новинка» в плашке с ценой на карточке. */
+  @IsOptional()
+  @IsBoolean()
+  isNew?: boolean;
+
   @IsOptional()
   @IsString()
   categoryId?: string | null;

@@ -103,6 +103,7 @@ model Tour {
   whatToTakeNote String? // под «Что взять с собой»
   seasonLabel  String? // белый бейдж на карточке: «Лето», «с 2027 года»; пусто — показывается сезон
   hidePrice    Boolean @default(false) // прятать цену в карточке (короткий вариант карточки)
+  isNew        Boolean @default(false) // метка «новинка» в плашке с ценой на карточке
 
   category   TourCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   categoryId String?
