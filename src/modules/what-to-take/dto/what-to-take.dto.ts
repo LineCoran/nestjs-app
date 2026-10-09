@@ -5,6 +5,12 @@ export class CreateWhatToTakeCategoryDto {
   @IsString()
   @IsNotEmpty()
   name: string;
+
+  /** Имя lucide-иконки (kebab-case) из каталога иконок; пустая строка — без иконки. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  icon?: string;
 }
 
 export class UpdateWhatToTakeCategoryDto extends PartialType(

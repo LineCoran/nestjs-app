@@ -302,6 +302,7 @@ model TourFeatureLink {
 model WhatToTakeCategory {
   id   String @id @default(uuid())
   name String @unique // «Личные вещи», «Снаряжение»
+  icon String? // kebab-case имя lucide-иконки из каталога (SiteIcon) — в оранжевой плашке у категории на сайте и в админке
 
   items WhatToTakeItem[]
 
