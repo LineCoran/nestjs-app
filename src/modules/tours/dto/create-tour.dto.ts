@@ -7,6 +7,7 @@ import {
   IsInt,
   IsISO8601,
   IsNotEmpty,
+  IsObject,
   IsOptional,
   IsString,
   MaxLength,
@@ -224,11 +225,14 @@ export class CreateTourDto {
   @MaxLength(300)
   excludedNote?: string | null;
 
-  /** Примечание «со звёздочкой» под «Что взять с собой»; null — убрать. */
+  /**
+   * Примечания «со звёздочкой» под «Что взять с собой» — у каждой категории
+   * своё: { [id категории]: текст до 300 символов }. Приводит к форме
+   * sanitizeWhatToTakeNotes (пустые убираются).
+   */
   @IsOptional()
-  @IsString()
-  @MaxLength(300)
-  whatToTakeNote?: string | null;
+  @IsObject()
+  whatToTakeNotes?: Record<string, string>;
 
   /**
    * Белый бейдж на карточке тура: «Лето», «с 2027 года». Пусто — на карточке

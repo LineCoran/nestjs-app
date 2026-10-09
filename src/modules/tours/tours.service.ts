@@ -46,6 +46,17 @@ function featureGroupRank(category: string) {
   return i === -1 ? FEATURE_GROUP_ORDER.length : i;
 }
 
+/** Примечания по категориям «Что взять с собой»: только непустые строки, до 300 символов. */
+function sanitizeWhatToTakeNotes(notes: Record<string, unknown>) {
+  const result: Record<string, string> = {};
+  for (const [categoryId, note] of Object.entries(notes)) {
+    if (typeof note !== 'string') continue;
+    const text = note.trim().slice(0, 300);
+    if (categoryId && text) result[categoryId] = text;
+  }
+  return result;
+}
+
 /** Поля формата, из которых собирается сводка для карточки (см. withFormatSummary). */
 const FORMAT_SUMMARY_SELECT = {
   priceFrom: true,
@@ -757,7 +768,10 @@ export class ToursService {
       earlyBooking: dto.earlyBooking,
       includedNote: dto.includedNote,
       excludedNote: dto.excludedNote,
-      whatToTakeNote: dto.whatToTakeNote,
+      whatToTakeNotes:
+        dto.whatToTakeNotes !== undefined
+          ? sanitizeWhatToTakeNotes(dto.whatToTakeNotes ?? {})
+          : undefined,
       hidePrice: dto.hidePrice,
       isNew: dto.isNew,
       isPublished: dto.isPublished,
