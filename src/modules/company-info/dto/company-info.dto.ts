@@ -175,33 +175,76 @@ export class CompanyHistoryItemDto {
   current: boolean;
 }
 
-/** Тексты и фото страницы «О компании». Админка шлёт объект целиком. */
+/** Тексты и фото страницы «О компании». Не присланные поля сохраняются как были. */
 export class CompanyPageDto {
+  /** Первый экран: метка над заголовком («о компании»). */
+  @IsOptional()
   @IsString()
   @MaxLength(80)
-  philosophyTag: string; // «— Философия»
+  heroTag?: string;
 
+  /** Первый экран: оранжевая часть заголовка («Горы по колено —»). */
+  @IsOptional()
   @IsString()
   @MaxLength(160)
-  philosophyTitle: string;
+  heroTitle?: string;
 
-  /** Абзацы через пустую строку. */
+  /** Первый экран: белая часть заголовка, с новой строки. */
+  @IsOptional()
   @IsString()
-  @MaxLength(3000)
-  philosophyText: string;
+  @MaxLength(200)
+  heroTitleRest?: string;
 
-  /** Путь загруженного фото; пустая строка — стандартное фото сайта. */
+  /** Первый экран: подзаголовок, переносы строк сохраняются. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(600)
+  heroSubtitle?: string;
+
+  /** Первый экран: фоновое фото; пустая строка — тёмный фон. */
+  @IsOptional()
   @IsString()
   @MaxLength(500)
-  philosophyImage: string;
+  heroImage?: string;
 
+  /** Первый экран: высота на десктопе, px. На телефонах подстраивается под контент. */
+  @IsOptional()
+  @IsInt()
+  @Min(360)
+  @Max(1000)
+  heroHeight?: number;
+
+  @IsOptional()
   @IsString()
   @MaxLength(80)
-  historyTag: string; // «— История»
+  philosophyTag?: string; // «— Философия»
 
+  @IsOptional()
   @IsString()
   @MaxLength(160)
-  historyTitle: string; // «Как мы росли»
+  philosophyTitle?: string;
+
+  /** Абзацы через пустую строку. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(3000)
+  philosophyText?: string;
+
+  /** Путь загруженного фото; пустая строка — блок без фото. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  philosophyImage?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  historyTag?: string; // «— История»
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  historyTitle?: string; // «Как мы росли»
 }
 
 export class UpdateCompanyInfoDto {

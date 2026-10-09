@@ -7,16 +7,33 @@ import {
   UpdateCompanyInfoDto,
 } from './dto/company-info.dto';
 
-/** Оставляет только известные поля страницы «О компании». */
-function sanitizeCompanyPage(dto: CompanyPageDto) {
-  return {
-    philosophyTag: dto.philosophyTag,
-    philosophyTitle: dto.philosophyTitle,
-    philosophyText: dto.philosophyText,
-    philosophyImage: dto.philosophyImage,
-    historyTag: dto.historyTag,
-    historyTitle: dto.historyTitle,
-  };
+const COMPANY_PAGE_KEYS = [
+  'heroTag',
+  'heroTitle',
+  'heroTitleRest',
+  'heroSubtitle',
+  'heroImage',
+  'heroHeight',
+  'philosophyTag',
+  'philosophyTitle',
+  'philosophyText',
+  'philosophyImage',
+  'historyTag',
+  'historyTitle',
+] as const;
+
+/**
+ * Известные поля страницы «О компании» поверх сохранённых: не присланные
+ * поля остаются как были.
+ */
+function mergeCompanyPage(current: unknown, dto: CompanyPageDto) {
+  const result: Record<string, unknown> = {};
+  const saved = (current ?? {}) as Record<string, unknown>;
+  for (const key of COMPANY_PAGE_KEYS) {
+    const value = dto[key] !== undefined ? dto[key] : saved[key];
+    if (value !== undefined) result[key] = value;
+  }
+  return result as Prisma.InputJsonValue;
 }
 
 /** Оставляет только месяцы 1–12 со строковым id категории или null («Все туры»). */
@@ -61,7 +78,7 @@ export class CompanyInfoService {
         catalogImage: dto.catalogImage,
         companyPage:
           dto.companyPage !== undefined
-            ? sanitizeCompanyPage(dto.companyPage)
+            ? mergeCompanyPage(current.companyPage, dto.companyPage)
             : undefined,
         history:
           dto.history !== undefined
