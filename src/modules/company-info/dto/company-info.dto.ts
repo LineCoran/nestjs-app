@@ -156,7 +156,33 @@ export class CatalogDefaultDto {
   months?: Record<string, string | null>;
 }
 
+/** Пункт ленты «Как мы росли» на странице «О компании». */
+export class CompanyHistoryItemDto {
+  @IsString()
+  @MaxLength(20)
+  year: string; // «2026»
+
+  @IsString()
+  @MaxLength(120)
+  title: string;
+
+  @IsString()
+  @MaxLength(600)
+  text: string;
+
+  /** Текущий этап: на сайте вместо точки — иконка-прицел. */
+  @IsBoolean()
+  current: boolean;
+}
+
 export class UpdateCompanyInfoDto {
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => CompanyHistoryItemDto)
+  history?: CompanyHistoryItemDto[];
+
   @IsOptional()
   @ValidateNested()
   @Type(() => CatalogDefaultDto)

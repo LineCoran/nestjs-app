@@ -532,6 +532,11 @@ model CompanyInfo {
   // Пусто — «Все туры». Приводит к форме sanitizeCatalogDefault.
   catalogDefault Json @default("{}")
 
+  // Лента «История — Как мы росли» на странице «О компании»:
+  // [{ year, title, text, current }] в порядке показа.
+  // null — ещё не настраивали, сайт показывает исходный макет; [] — блок скрыт.
+  history Json?
+
   updatedAt DateTime @updatedAt
 
   @@map("company_info")

@@ -46,6 +46,15 @@ export class CompanyInfoService {
         heroSubtitle: dto.heroSubtitle,
         heroImage: dto.heroImage,
         catalogImage: dto.catalogImage,
+        history:
+          dto.history !== undefined
+            ? dto.history.map(({ year, title, text, current }) => ({
+                year,
+                title,
+                text,
+                current,
+              }))
+            : undefined,
         catalogDefault:
           dto.catalogDefault !== undefined
             ? sanitizeCatalogDefault(dto.catalogDefault)
