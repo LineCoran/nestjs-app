@@ -175,7 +175,41 @@ export class CompanyHistoryItemDto {
   current: boolean;
 }
 
+/** Тексты и фото страницы «О компании». Админка шлёт объект целиком. */
+export class CompanyPageDto {
+  @IsString()
+  @MaxLength(80)
+  philosophyTag: string; // «— Философия»
+
+  @IsString()
+  @MaxLength(160)
+  philosophyTitle: string;
+
+  /** Абзацы через пустую строку. */
+  @IsString()
+  @MaxLength(3000)
+  philosophyText: string;
+
+  /** Путь загруженного фото; пустая строка — стандартное фото сайта. */
+  @IsString()
+  @MaxLength(500)
+  philosophyImage: string;
+
+  @IsString()
+  @MaxLength(80)
+  historyTag: string; // «— История»
+
+  @IsString()
+  @MaxLength(160)
+  historyTitle: string; // «Как мы росли»
+}
+
 export class UpdateCompanyInfoDto {
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CompanyPageDto)
+  companyPage?: CompanyPageDto;
+
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(50)

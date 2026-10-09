@@ -3,8 +3,21 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
 import {
   CatalogDefaultDto,
+  CompanyPageDto,
   UpdateCompanyInfoDto,
 } from './dto/company-info.dto';
+
+/** Оставляет только известные поля страницы «О компании». */
+function sanitizeCompanyPage(dto: CompanyPageDto) {
+  return {
+    philosophyTag: dto.philosophyTag,
+    philosophyTitle: dto.philosophyTitle,
+    philosophyText: dto.philosophyText,
+    philosophyImage: dto.philosophyImage,
+    historyTag: dto.historyTag,
+    historyTitle: dto.historyTitle,
+  };
+}
 
 /** Оставляет только месяцы 1–12 со строковым id категории или null («Все туры»). */
 function sanitizeCatalogDefault(dto: CatalogDefaultDto) {
@@ -46,6 +59,10 @@ export class CompanyInfoService {
         heroSubtitle: dto.heroSubtitle,
         heroImage: dto.heroImage,
         catalogImage: dto.catalogImage,
+        companyPage:
+          dto.companyPage !== undefined
+            ? sanitizeCompanyPage(dto.companyPage)
+            : undefined,
         history:
           dto.history !== undefined
             ? dto.history.map(({ year, title, text, current }) => ({
